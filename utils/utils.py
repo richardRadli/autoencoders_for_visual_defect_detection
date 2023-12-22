@@ -1,5 +1,8 @@
 import colorlog
+import datetime
 import logging
+import pandas as pd
+import torch
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -45,3 +48,43 @@ def setup_logger():
     logger.addHandler(console_handler)
 
     return logger
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# --------------------------------------- U S E   G P U   I F   A V A I L A B L E --------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+def use_gpu_if_available() -> torch.device:
+    """
+    Provides information about the currently available GPUs and returns a torch device for training and inference.
+
+    :return: A torch device for either "cuda" or "cpu".
+    """
+
+    if torch.cuda.is_available():
+        cuda_info = {
+            'CUDA Available': [torch.cuda.is_available()],
+            'CUDA Device Count': [torch.cuda.device_count()],
+            'Current CUDA Device': [torch.cuda.current_device()],
+            'CUDA Device Name': [torch.cuda.get_device_name(0)]
+        }
+
+        df = pd.DataFrame(cuda_info)
+        logging.info(df)
+    else:
+        logging.info("Only CPU is available!")
+
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------- C R E A T E   T I M E S T A M P ------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+def create_timestamp() -> str:
+    """
+    Creates a timestamp in the format of '%Y-%m-%d_%H-%M-%S', representing the current date and time.
+
+    :return: The timestamp string.
+    """
+
+    return datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
