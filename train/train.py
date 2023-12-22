@@ -5,46 +5,52 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torchsummary import summary
 
+from config.config import ConfigTraining
+from config.network_config import network_configs, dataset_images_path_selector
 from data_loader import MVTecDataset
 from models.network_selector import NetworkFactory
 
 
 class TrainAutoEncoder:
     def __init__(self):
-        # Define your dataset's root directory
-        root_dir = "D:/research/datasets/mvtec/bottle/train/good"
+        self.train_cfg = ConfigTraining().parse()
+        network_cfg = network_configs().get(self.train_cfg.network_type)
 
-        # Create an instance of the custom ImageDataset
-        dataset = MVTecDataset(root_dir=root_dir)
+        dataset = MVTecDataset(root_dir=dataset_images_path_selector().get(self.train_cfg.dataset_type).get("train"))
 
-        # Create a DataLoader
-        batch_size = 16
-        self.dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-        network_cfg = {
-            "input_channel": 3,
-            "flc": 32,
-            "z_dim": 100
-        }
-        self.model = NetworkFactory.create_network(network_type="BASE", network_cfg=network_cfg, device="cuda")
+        self.dataloader = DataLoader(dataset=dataset,
+                                     batch_size=self.train_cfg.batch_size,
+                                     shuffle=True)
+        self.model = NetworkFactory.create_network(network_type=self.train_cfg.network_type,
+                                                   network_cfg=network_cfg,
+                                                   device="cuda")
         summary(self.model, (3, 128, 128))
 
-        self.criterion = nn.MSELoss()
-        self.optimizer = optim.Adam(params=self.model.parameters(), lr=2e-4)
+        if self.train_cfg.loss_function_type == "mse":
+            self.criterion = nn.MSELoss()
+        elif self.train_cfg.loss_function_type == "ssim":
+            pass
+        else:
+            raise ValueError(f"Wrong loss function type {self.train_cfg.loss_function_type}")
+
+        self.optimizer = optim.Adam(params=self.model.parameters(),
+                                    lr=self.train_cfg.learning_rate,
+                                    weight_decay=self.train_cfg.weight_decay)
 
     def train(self):
-        for epoch in tqdm(range(10), total=10, desc="Epochs"):
+        for epoch in tqdm(range(self.train_cfg.epochs), total=self.train_cfg.epochs, desc="Epochs"):
             self.model.train()  # Set the model to training mode
             total_loss = 0.0
 
             # Example usage in a training loop
             for batch_idx, images in tqdm(enumerate(self.dataloader), total=len(self.dataloader), desc="Training"):
-                images = images.to("cuda")  # Move images to the GPU if available
-                self.optimizer.zero_grad()  # Clear gradients
+                images = images.to("cuda")
+                self.optimizer.zero_grad()
 
                 # Forward pass
                 outputs = self.model(images)
-                # Calculate SSIM loss
+
+                # Calculate loss
                 loss = self.criterion(outputs, images)
 
                 # Backpropagation
@@ -65,4 +71,4 @@ class TrainAutoEncoder:
 
 if __name__ == "__main__":
     ae = TrainAutoEncoder()
-    ae.train()
+    # ae.train()
