@@ -13,7 +13,7 @@ class ConfigTraining:
         self.parser.add_argument('--batch_size', type=int, default=32, help='batch size')
         self.parser.add_argument('--learning_rate', type=float, default=2e-4, help='learning rate')
         self.parser.add_argument('--weight_decay', type=float, default=1e-4, help='weight decay')
-        self.parser.add_argument('--loss_function_type', type=str, default='mse', choices=['mse', 'ssim'])
+        self.parser.add_argument('--loss_function_type', type=str, default='ssim', choices=['mse', 'ssim'])
         self.parser.add_argument('--step_size', type=int, default=10, help='step size')
         self.parser.add_argument('--gamma', type=float, default=1e-5)
 

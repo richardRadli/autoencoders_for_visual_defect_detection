@@ -1,8 +1,9 @@
 import colorlog
-import datetime
 import logging
 import pandas as pd
 import torch
+
+from datetime import datetime
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -87,4 +88,3 @@ def create_timestamp() -> str:
     """
 
     return datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-

@@ -10,7 +10,7 @@ class _Const(object):
     user = os.getlogin()
     root_mapping = {
         'ricsi': {
-            "PROJECT_ROOT": 'D:/AE/',
+            "PROJECT_ROOT": 'D:/AE/storage/',
             "DATASET_ROOT": 'D:/mvtec/'
         }
     }
@@ -49,7 +49,15 @@ class _Const(object):
 
 class Data(_Const):
     dirs_data = {
+        "bottle_model_weights_dir":
+            "weights/bottle_model_weights",
+        "bottle_log_dir":
+            "logs/bottle_model_weights",
 
+        "cable_model_weights_dir":
+            "weights/cable_model_weights",
+        "cable_log_dir":
+            "logs/cable_model_weights"
     }
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -63,7 +71,7 @@ class Data(_Const):
     # ------------------------------------------ G E T   D A T A   P A T H ---------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------
     def get_data_path(self, key):
-        return os.path.join(self.DATASET_ROOT, self.dirs_data.get(key, ""))
+        return os.path.join(self.PROJECT_ROOT, self.dirs_data.get(key, ""))
 
 
 class Datasets(_Const):
@@ -147,5 +155,5 @@ class Datasets(_Const):
 
 CONST: _Const = _Const()
 # IMAGES_PATH: Images = Images()
-# DATA_PATH: Data = Data()
+DATA_PATH: Data = Data()
 DATASET_PATH: Datasets = Datasets()

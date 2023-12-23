@@ -13,9 +13,10 @@ from torch.utils.tensorboard import SummaryWriter
 from torchsummary import summary
 
 from config.config import ConfigTraining
-from config.network_config import network_configs, dataset_images_path_selector
+from config.network_config import network_configs, dataset_images_path_selector, dataset_data_path_selector
 from data_loader import MVTecDataset
 from models.network_selector import NetworkFactory
+from ssim_loss import SSIMLoss
 from utils.utils import create_timestamp, use_gpu_if_available, setup_logger
 
 
@@ -47,14 +48,14 @@ class TrainAutoEncoder:
         self.model = NetworkFactory.create_network(network_type=self.train_cfg.network_type,
                                                    network_cfg=network_cfg,
                                                    device="cuda")
-        summary(self.model, (3, 128, 128))
+        summary(
+            model=self.model,
+            input_size=(
+                network_cfg.get("input_channel"), network_cfg.get("img_size")[0], network_cfg.get("img_size")[1]
+            )
+        )
 
-        if self.train_cfg.loss_function_type == "mse":
-            self.criterion = nn.MSELoss()
-        elif self.train_cfg.loss_function_type == "ssim":
-            pass
-        else:
-            raise ValueError(f"Wrong loss function type {self.train_cfg.loss_function_type}")
+        self.criterion = self.get_loss_function(self.train_cfg.loss_function_type)
 
         self.optimizer = optim.Adam(params=self.model.parameters(),
                                     lr=self.train_cfg.learning_rate,
@@ -66,21 +67,38 @@ class TrainAutoEncoder:
 
         self.device = use_gpu_if_available()
 
-        tensorboard_log_dir = self.create_save_dirs(network_cfg.get('logs_dir'))
-        self.writer = SummaryWriter(log_dir=tensorboard_log_dir)
+        tensorboard_log_dir = (
+            self.create_save_dirs(
+                dataset_data_path_selector().get(self.train_cfg.dataset_type).get("log_dir")
+            )
+        )
+        self.writer = SummaryWriter(log_dir=str(tensorboard_log_dir))
+
+        self.save_path = (
+            self.create_save_dirs(
+                dataset_data_path_selector().get(self.train_cfg.dataset_type).get("model_weights_dir")
+            )
+        )
+
+    @staticmethod
+    def get_loss_function(loss_function_type):
+        loss_functions = {
+            "mse": nn.MSELoss(),
+            "ssim": SSIMLoss(5)
+        }
+
+        if loss_function_type in loss_functions:
+            return loss_functions[loss_function_type]
+        else:
+            raise ValueError(f"Wrong loss function type {loss_function_type}")
 
     # ------------------------------------------------------------------------------------------------------------------
     # ---------------------------------------- C R E A T E   S A V E   D I R S -----------------------------------------
     # ------------------------------------------------------------------------------------------------------------------
-    def create_save_dirs(self, network_cfg):
-        """
-
-        :param network_cfg:
-        :return:
-        """
-
-        directory_path = network_cfg.get(self.cfg.type_of_net).get(self.cfg.dataset_type)
-        directory_to_create = os.path.join(directory_path, f"{self.timestamp}_{self.cfg.type_of_loss_func}")
+    def create_save_dirs(self, directory_path):
+        directory_to_create = (
+            os.path.join(directory_path, self.train_cfg.network_type, f"{self.timestamp}")
+        )
         os.makedirs(directory_to_create, exist_ok=True)
         return directory_to_create
 
@@ -88,14 +106,16 @@ class TrainAutoEncoder:
         best_valid_loss = float('inf')
         best_model_path = None
 
-        for epoch in tqdm(range(self.train_cfg.epochs), total=self.train_cfg.epochs, desc="Epochs"):
+        for epoch in tqdm(
+                range(self.train_cfg.epochs), total=self.train_cfg.epochs, desc=colorama.Fore.LIGHTRED_EX + "Epochs"
+        ):
             train_losses = []
             valid_losses = []
 
             self.model.train()
             for batch_idx, images in tqdm(enumerate(self.train_dataloader),
                                           total=len(self.train_dataloader),
-                                          desc="Training"):
+                                          desc=colorama.Fore.GREEN + "Training"):
                 images = images.to(self.device)
                 self.optimizer.zero_grad()
                 outputs = self.model(images)
@@ -108,7 +128,7 @@ class TrainAutoEncoder:
             with torch.no_grad():
                 for batch_idx, images in tqdm(enumerate(self.val_dataloader),
                                               total=len(self.val_dataloader),
-                                              desc="Validation"):
+                                              desc=colorama.Fore.MAGENTA + "Validation"):
                     images = images.to(self.device)
                     outputs = self.model(images)
                     valid_loss = self.criterion(outputs, images)
@@ -129,7 +149,7 @@ class TrainAutoEncoder:
                 best_valid_loss = valid_loss
                 if best_model_path is not None:
                     os.remove(best_model_path)
-                best_model_path = os.path.join(self.save_path, "epoch_" + str(epoch) + ".pt")
+                best_model_path = os.path.join(str(self.save_path), "epoch_" + str(epoch) + ".pt")
                 torch.save(self.model.state_dict(), best_model_path)
                 logging.info(f"New weights have been saved at epoch {epoch} with value of {valid_loss:.5f}")
             else:

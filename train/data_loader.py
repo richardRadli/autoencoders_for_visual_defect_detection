@@ -20,7 +20,12 @@ class MVTecDataset(Dataset):
 
     def __getitem__(self, idx):
         image_path = self.image_files[idx]
-        image = Image.open(image_path).convert('RGB')
+
+        try:
+            image = Image.open(image_path).convert('RGB')
+        except Exception as e:
+            print(f"Error loading image at path {image_path}: {e}")
+            return None
 
         if self.transform:
             image = self.transform(image)
