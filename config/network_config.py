@@ -1,4 +1,7 @@
 from config.const import DATA_PATH, DATASET_PATH
+from config.config import ConfigTraining
+
+cfg = ConfigTraining().parse()
 
 
 def network_configs():
@@ -11,13 +14,31 @@ def network_configs():
             'padding':
                 1,
             'flc':
-                32,
+                [32, 64, 128],
             "alpha_slope":
                 0.2,
             "latent_space_dimension":
                 100,
             "img_size":
-                (128, 128),
+                cfg.img_size,
+            "input_channel":
+                3
+        },
+        "EXTENDED": {
+            'kernel_size':
+                [3, 4, 8],
+            'stride':
+                [1, 2],
+            'padding':
+                [0, 1],
+            'flc':
+                [32, 64, 128, 256],
+            "alpha_slope":
+                0.2,
+            "latent_space_dimension":
+                100,
+            "img_size":
+                cfg.img_size,
             "input_channel":
                 3
         }

@@ -31,11 +31,19 @@ class TrainAutoEncoder:
         self.train_cfg = ConfigTraining().parse()
         network_cfg = network_configs().get(self.train_cfg.network_type)
 
-        dataset = MVTecDataset(root_dir=dataset_images_path_selector().get(self.train_cfg.dataset_type).get("train"))
+        dataset = MVTecDataset(root_dir=dataset_images_path_selector().get(self.train_cfg.dataset_type).get("train"),
+                               img_size=self.train_cfg.img_size,
+                               crop_size=self.train_cfg.crop_size,
+                               num_crops=self.train_cfg.num_crops,
+                               crop=True)
 
         dataset_size = len(dataset)
         val_size = int(self.train_cfg.validation_split * dataset_size)
         train_size = dataset_size - val_size
+
+        logging.info(f"The size of the dataset is {dataset_size}, "
+                     f"from that, the size of the training set is {train_size} "
+                     f"and the size of the validation set is {val_size}")
 
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
@@ -84,7 +92,7 @@ class TrainAutoEncoder:
     def get_loss_function(loss_function_type):
         loss_functions = {
             "mse": nn.MSELoss(),
-            "ssim": SSIMLoss(5)
+            "ssim": SSIMLoss()
         }
 
         if loss_function_type in loss_functions:

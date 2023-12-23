@@ -34,7 +34,12 @@ def ssim_loss(
 
 class SSIMLoss(nn.Module):
     def __init__(
-        self, window_size: int, max_val: float = 1.0, eps: float = 1e-12, reduction: str = "mean", padding: str = "same"
+        self,
+            window_size: int = 11,
+            max_val: float = 1.0,
+            eps: float = 1e-12,
+            reduction: str = "mean",
+            padding: str = "same"
     ) -> None:
         super().__init__()
         self.window_size: int = window_size
