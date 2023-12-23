@@ -69,10 +69,10 @@ def dataset_data_path_selector():
 def dataset_images_path_selector():
     path_to_images = {
         "bottle": {
-            "train": DATASET_PATH.get_data_path("bottle_train")
+            "workflow": DATASET_PATH.get_data_path("bottle_train")
         },
         "cable": {
-            "train": DATASET_PATH.get_data_path("cable_train")
+            "workflow": DATASET_PATH.get_data_path("cable_train")
         }
     }
 
