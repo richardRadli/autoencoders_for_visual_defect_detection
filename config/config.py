@@ -41,7 +41,6 @@ class ConfigTraining:
         self.parser.add_argument('--img_size', type=tuple, default=(256, 256), help='image size')
         self.parser.add_argument('--crop_it', type=bool, default=True, help='')
         self.parser.add_argument('--crop_size', type=tuple, default=(128, 128), help='')
-        self.parser.add_argument('--num_crops', type=int, default=100, help='number of crops')
 
     def parse(self):
         self.opt = self.parser.parse_args()
@@ -55,6 +54,8 @@ class ConfigTesting:
 
         self.parser.add_argument('--network_type', type=str, default='BASE', choices=['BASE', 'EXTENDED'])
         self.parser.add_argument('--img_size', type=tuple, default=(256, 256), help='image size')
+        self.parser.add_argument('--crop_size', type=tuple, default=(128, 128), help='')
+        self.parser.add_argument('--stride', type=int, default=32, help='stride')
 
     def parse(self):
         self.opt = self.parser.parse_args()

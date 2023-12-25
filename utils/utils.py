@@ -98,14 +98,14 @@ def random_crop(image, new_size):
     h, w = image.shape[:2]
     y = np.random.randint(0, h - new_size[0])
     x = np.random.randint(0, w - new_size[1])
-    image = image[y:y+new_size[0], x:x+new_size[1]]
+    image = image[y:y + new_size[0], x:x + new_size[1]]
     return image
 
 
 def rotate_image(img, angle, crop):
     h, w = img.shape[:2]
     angle %= 360
-    m_rotate = cv2.getRotationMatrix2D((w/2, h/2), angle, 1)
+    m_rotate = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1)
     img_rotated = cv2.warpAffine(img, m_rotate, (w, h))
     if crop:
         angle_crop = angle % 180
@@ -118,11 +118,11 @@ def rotate_image(img, angle, crop):
         r = hw_ratio if h > w else 1 / hw_ratio
         denominator = r * tan_theta + 1
         crop_mult = numerator / denominator
-        w_crop = int(round(crop_mult*w))
-        h_crop = int(round(crop_mult*h))
-        x0 = int((w-w_crop)/2)
-        y0 = int((h-h_crop)/2)
-        img_rotated = img_rotated[y0:y0+h_crop, x0:x0+w_crop]
+        w_crop = int(round(crop_mult * w))
+        h_crop = int(round(crop_mult * h))
+        x0 = int((w - w_crop) / 2)
+        y0 = int((h - h_crop) / 2)
+        img_rotated = img_rotated[y0:y0 + h_crop, x0:x0 + w_crop]
     return img_rotated
 
 
@@ -172,3 +172,35 @@ def augment_images(filelist, cfg):
 
             output_filepath = os.sep.join(["C:/Users/ricsi/Desktop/aug", '{}{}'.format(varied_imgname, ext)])
             cv2.imwrite(output_filepath, img_varied)
+
+
+def get_patch(image, new_size, stride):
+    h, w = image.shape[:2]
+    i, j = new_size, new_size
+    patch = []
+    while i <= h:
+        while j <= w:
+            patch.append(image[i - new_size:i, j - new_size:j])
+            j += stride
+        j = new_size
+        i += stride
+    return np.array(patch)
+
+
+def patch2img(patches, im_size, patch_size, stride):
+    patches = patches.detach().numpy()
+    patches = np.transpose(patches, (0, 2, 3, 1))
+    img = np.zeros((im_size, im_size, patches.shape[3] + 1))
+    i, j = patch_size, patch_size
+    k = 0
+    while i <= im_size:
+        while j <= im_size:
+            img[i - patch_size:i, j - patch_size:j, :-1] += patches[k]
+            img[i - patch_size:i, j - patch_size:j, -1] += np.ones((patch_size, patch_size))
+            k += 1
+            j += stride
+        j = patch_size
+        i += stride
+    mask = np.repeat(img[:, :, -1][..., np.newaxis], patches.shape[3], 2)
+    img = img[:, :, :-1] / mask
+    return img
