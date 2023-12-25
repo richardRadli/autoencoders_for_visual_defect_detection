@@ -31,11 +31,9 @@ class TrainAutoEncoder:
         self.train_cfg = ConfigTraining().parse()
         network_cfg = network_configs().get(self.train_cfg.network_type)
 
-        dataset = MVTecDataset(root_dir=dataset_images_path_selector().get(self.train_cfg.dataset_type).get("workflow"),
-                               img_size=self.train_cfg.img_size,
-                               crop_size=self.train_cfg.crop_size,
-                               num_crops=self.train_cfg.num_crops,
-                               crop_it=True)
+        dataset = MVTecDataset(root_dir=dataset_images_path_selector().get(self.train_cfg.dataset_type).get("aug"),
+                               img_size=self.train_cfg.crop_size,
+                               )
 
         dataset_size = len(dataset)
         val_size = int(self.train_cfg.validation_split * dataset_size)
@@ -146,7 +144,7 @@ class TrainAutoEncoder:
 
             train_loss_avg = np.average(train_losses)
             valid_loss_avg = np.average(valid_losses)
-            self.writer.add_scalars("Loss", {"Train": train_loss_avg, "Valid": valid_loss_avg})
+            self.writer.add_scalars("Loss", {"Train": train_loss_avg, "Valid": valid_loss_avg}, epoch)
 
             logging.info(f"Train Loss: {train_loss_avg:.5f} valid Loss: {valid_loss_avg:.5f}")
 

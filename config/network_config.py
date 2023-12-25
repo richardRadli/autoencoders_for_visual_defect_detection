@@ -20,7 +20,7 @@ def network_configs():
             "latent_space_dimension":
                 100,
             "img_size":
-                cfg.img_size,
+                cfg.crop_size if cfg.crop_it else cfg.img_size,
             "input_channel":
                 3
         },
@@ -38,7 +38,7 @@ def network_configs():
             "latent_space_dimension":
                 100,
             "img_size":
-                cfg.img_size,
+                cfg.crop_size if cfg.crop_it else cfg.img_size,
             "input_channel":
                 3
         }
@@ -69,10 +69,12 @@ def dataset_data_path_selector():
 def dataset_images_path_selector():
     path_to_images = {
         "bottle": {
-            "workflow": DATASET_PATH.get_data_path("bottle_train")
+            "train": DATASET_PATH.get_data_path("bottle_train"),
+            "aug": DATASET_PATH.get_data_path("bottle_aug")
         },
         "cable": {
-            "workflow": DATASET_PATH.get_data_path("cable_train")
+            "train": DATASET_PATH.get_data_path("cable_train"),
+            "aug": DATASET_PATH.get_data_path("cable_aug")
         }
     }
 

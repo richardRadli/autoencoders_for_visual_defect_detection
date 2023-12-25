@@ -78,7 +78,10 @@ class Datasets(_Const):
     dirs_dataset = {
         # B O T T L E
         "bottle_train":
-            "bottle/workflow/good",
+            "bottle/train/good",
+
+        "bottle_aug":
+            "bottle/aug",
 
         "bottle_test_broken_large":
             "bottle/test/broken_large",
@@ -98,7 +101,10 @@ class Datasets(_Const):
 
         # C A B L E
         "cable_train":
-            "cable/workflow/good",
+            "cable/train/good",
+
+        "cable_aug":
+            "cable/aug",
 
         "cable_test_bent_wire":
             "cable/test/bent_wire",
