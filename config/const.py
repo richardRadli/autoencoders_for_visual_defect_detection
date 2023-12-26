@@ -49,15 +49,15 @@ class _Const(object):
 
 class Data(_Const):
     dirs_data = {
-        "bottle_model_weights_dir":
-            "weights/bottle_model_weights",
-        "bottle_log_dir":
-            "logs/bottle_model_weights",
+        "texture_1_model_weights_dir":
+            "weights/texture_1_model_weights",
+        "texture_1_log_dir":
+            "logs/texture_1_model_weights",
 
-        "cable_model_weights_dir":
-            "weights/cable_model_weights",
-        "cable_log_dir":
-            "logs/cable_model_weights"
+        "texture_2_model_weights_dir":
+            "weights/texture_2_model_weights",
+        "texture_2_log_dir":
+            "logs/texture_2_model_weights"
     }
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -77,72 +77,31 @@ class Data(_Const):
 class Datasets(_Const):
     dirs_dataset = {
         # B O T T L E
-        "bottle_train":
-            "bottle/train/good",
+        "texture_1_train":
+            "texture_1/train/good",
 
-        "bottle_aug":
-            "bottle/aug",
+        "texture_1_aug":
+            "texture_1/aug",
 
-        "bottle_test_broken_large":
-            "bottle/test/broken_large",
-        "bottle_test_broken_small":
-            "bottle/test/broken_small",
-        "bottle_test_contamination":
-            "bottle/test/contamination",
-        "bottle_test_good":
-            "bottle/test/good",
+        "texture_1_test_defective":
+            "texture_1/test/defective",
 
-        "bottle_gt_broken_large":
-            "bottle/ground_truth/broken_large",
-        "bottle_gt_broken_small":
-            "bottle/ground_truth/broken_small",
-        "bottle_gt_contamination":
-            "bottle/ground_truth/contamination",
+        "texture_1_gt_defective":
+            "texture_1/ground_truth/defective",
+
 
         # C A B L E
-        "cable_train":
-            "cable/train/good",
+        "texture_2_train":
+            "texture_2/train/good",
 
-        "cable_aug":
-            "cable/aug",
+        "texture_2_aug":
+            "texture_2/aug",
 
-        "cable_test_bent_wire":
-            "cable/test/bent_wire",
-        "cable_test_cable_swap":
-            "cable/test/cable_swap",
-        "cable_test_combined":
-            "cable/test/combined",
-        "cable_test_cut_inner_insulation":
-            "cable/test/cut_inner_insulation",
-        "cable_test_cut_outer_insulation":
-            "cable/test/cut_outer_insulation",
-        "cable_test_missing_cable":
-            "cable/test/missing_cable",
-        "cable_test_missing_wire":
-            "cable/test/missing_wire",
-        "cable_test_poke_insulation":
-            "cable/test/poke_insulation",
-        "cable_test_good":
-            "cable/test/good",
+        "texture_2_test_defective":
+            "texture_2/test/defective",
 
-        "cable_gt_bent_wire":
-            "cable/ground_truth/bent_wire",
-        "cable_gt_cable_swap":
-            "cable/ground_truth/cable_swap",
-        "cable_gt_combined":
-            "cable/ground_truth/combined",
-        "cable_gt_cut_inner_insulation":
-            "cable/ground_truth/cut_inner_insulation",
-        "cable_gt_cut_outer_insulation":
-            "cable/ground_truth/cut_outer_insulation",
-        "cable_gt_missing_cable":
-            "cable/ground_truth/missing_cable",
-        "cable_gt_missing_wire":
-            "cable/ground_truth/missing_wire",
-        "cable_gt_poke_insulation":
-            "cable/ground_truth/poke_insulation",
-
-
+        "texture_2_gt_defective":
+            "texture_2/ground_truth/defective",
     }
 
     # ------------------------------------------------------------------------------------------------------------------

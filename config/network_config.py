@@ -49,17 +49,17 @@ def network_configs():
 
 def dataset_data_path_selector():
     path_to_data = {
-        "bottle": {
+        "texture_1": {
             "model_weights_dir":
-                DATA_PATH.get_data_path("bottle_model_weights_dir"),
+                DATA_PATH.get_data_path("texture_1_model_weights_dir"),
             "log_dir":
-                DATA_PATH.get_data_path("bottle_log_dir")
+                DATA_PATH.get_data_path("texture_1_log_dir")
         },
-        "cable": {
+        "texture_2": {
             "model_weights_dir":
-                DATA_PATH.get_data_path("cable_model_weights_dir"),
+                DATA_PATH.get_data_path("texture_2_model_weights_dir"),
             "log_dir":
-                DATA_PATH.get_data_path("cable_log_dir")
+                DATA_PATH.get_data_path("texture_2_log_dir")
         }
     }
 
@@ -68,13 +68,15 @@ def dataset_data_path_selector():
 
 def dataset_images_path_selector():
     path_to_images = {
-        "bottle": {
-            "train": DATASET_PATH.get_data_path("bottle_train"),
-            "aug": DATASET_PATH.get_data_path("bottle_aug")
+        "texture_1": {
+            "train": DATASET_PATH.get_data_path("texture_1_train"),
+            "aug": DATASET_PATH.get_data_path("texture_1_aug"),
+            "gt": DATASET_PATH.get_data_path("texture_1_gt_defective")
         },
-        "cable": {
-            "train": DATASET_PATH.get_data_path("cable_train"),
-            "aug": DATASET_PATH.get_data_path("cable_aug")
+        "texture_2": {
+            "train": DATASET_PATH.get_data_path("texture_2_train"),
+            "aug": DATASET_PATH.get_data_path("texture_2_aug"),
+            "gt": DATASET_PATH.get_data_path("texture_2_gt_defective")
         }
     }
 

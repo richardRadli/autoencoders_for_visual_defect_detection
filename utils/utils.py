@@ -1,13 +1,16 @@
 import colorlog
 import cv2
 import logging
+import math
 import numpy as np
 import os
 import random
 import pandas as pd
+import time
 import torch
 
 from datetime import datetime
+from functools import wraps
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -132,8 +135,8 @@ def random_rotate(img, angle_vari, p_crop):
     return rotate_image(img, angle, crop)
 
 
-def augment_images(filelist, cfg):
-    for n, filepath in enumerate(filelist):
+def augment_images(filelist, aug_out_dir, cfg):
+    for filepath, n in filelist:
         img = cv2.imread(filepath)
         if img.shape[:2] != cfg.img_size:
             img = cv2.resize(img, cfg.img_size)
@@ -170,7 +173,7 @@ def augment_images(filelist, cfg):
                 img_varied = cv2.flip(img_varied, 0)
                 varied_imgname += 'v'
 
-            output_filepath = os.sep.join(["C:/Users/ricsi/Desktop/aug", '{}{}'.format(varied_imgname, ext)])
+            output_filepath = os.sep.join([aug_out_dir, '{}{}'.format(varied_imgname, ext)])
             cv2.imwrite(output_filepath, img_varied)
 
 
@@ -188,7 +191,7 @@ def get_patch(image, new_size, stride):
 
 
 def patch2img(patches, im_size, patch_size, stride):
-    patches = patches.detach().numpy()
+    patches = patches.detach().cpu().numpy()
     patches = np.transpose(patches, (0, 2, 3, 1))
     img = np.zeros((im_size, im_size, patches.shape[3] + 1))
     i, j = patch_size, patch_size
@@ -237,6 +240,22 @@ def set_img_color(img, predict_mask, weight_foreground):
     return img
 
 
+def generate_image_list(train_data_dir, augment_num):
+    filenames = os.listdir(train_data_dir)
+    num_imgs = len(filenames)
+    num_ave_aug = int(math.floor(augment_num/num_imgs))
+    rem = augment_num - num_ave_aug*num_imgs
+    lucky_seq = [True]*rem + [False]*(num_imgs-rem)
+    random.shuffle(lucky_seq)
+
+    img_list = [
+        (os.sep.join([train_data_dir, filename]), num_ave_aug+1 if lucky else num_ave_aug)
+        for filename, lucky in zip(filenames, lucky_seq)
+    ]
+
+    return img_list
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # ----------------------- F I N D   L A T E S T   F I L E   I N   L A T E S T   D I R E C T O R Y ----------------------
 # ----------------------------------------------------------------------------------------------------------------------
@@ -245,7 +264,6 @@ def find_latest_file_in_latest_directory(path: str) -> str:
     Finds the latest file in the latest directory within the given path.
 
     :param path: str, the path to the directory where we should look for the latest file
-    :param type_of_network:
     :return: str, the path to the latest file
     :raise: when no directories or files found
     """
@@ -268,3 +286,25 @@ def find_latest_file_in_latest_directory(path: str) -> str:
     logging.info(f"The latest file is {latest_file}")
 
     return latest_file
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# ------------------------------------- M E A S U R E   E X E C U T I O N   T I M E ------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+def measure_execution_time(func):
+    """
+    Decorator to measure the execution time.
+
+    :param func:
+    :return:
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        logging.info(f"Execution time of {func.__name__}: {execution_time} seconds")
+        return result
+    return wrapper

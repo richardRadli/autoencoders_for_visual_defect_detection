@@ -1,3 +1,5 @@
+import logging
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,6 +9,7 @@ import torch
 from glob import glob
 from skimage import morphology
 from skimage.metrics import structural_similarity as ssim
+from sklearn.metrics import confusion_matrix, roc_curve, auc
 
 from config.config import ConfigTesting
 from config.network_config import network_configs, dataset_data_path_selector
@@ -25,7 +28,7 @@ class TestAutoEncoder:
             if self.test_cfg.img_size[0] - self.test_cfg.crop_size[0] < self.test_cfg.stride \
             else self.test_cfg.img_size[0]
 
-        self.device = "cpu"  # use_gpu_if_available()
+        self.device = use_gpu_if_available()
         self.model = NetworkFactory.create_network(network_type=self.test_cfg.network_type,
                                                    network_cfg=network_cfg,
                                                    device=self.device)
@@ -61,6 +64,7 @@ class TestAutoEncoder:
             patches = get_patch(test_img_, self.test_cfg.crop_size[0], self.test_cfg.stride)
             patches = np.transpose(patches, (0, 3, 1, 2))
             patches = torch.from_numpy(patches).float()
+            patches = patches.to(self.device)
             patches = self.model(patches)
             decoded_img = (
                 patch2img(patches, self.test_cfg.img_size[0], self.test_cfg.crop_size[0], self.test_cfg.stride)
@@ -69,9 +73,8 @@ class TestAutoEncoder:
         rec_img = np.reshape((decoded_img * 255.).astype('uint8'), test_img.shape)
         _, ssim_residual_map = ssim(test_img, rec_img, full=True, multichannel=True, channel_axis=2)
         ssim_residual_map = 1 - np.mean(ssim_residual_map, axis=2)
-        l1_residual_map = np.mean(np.abs(test_img / 255. - rec_img / 255.), axis=2)
 
-        return test_img, rec_img, ssim_residual_map, l1_residual_map
+        return test_img, rec_img, ssim_residual_map
 
     def get_depressing_mask(self):
         depr_mask = np.ones((self.mask_size, self.mask_size)) * 0.2
@@ -81,7 +84,6 @@ class TestAutoEncoder:
     @staticmethod
     def plot_results(test_img, rec_img, mask, vis_img):
         test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
-        rec_img = cv2.cvtColor(rec_img, cv2.COLOR_BGR2RGB)
         vis_img = cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB)
 
         plt.subplot(2, 2, 1)
@@ -103,28 +105,45 @@ class TestAutoEncoder:
         plt.tight_layout()
         plt.show()
 
-    def get_results(self):
+    def get_results(self, ssim_threshold):
         images = sorted(glob('D:/mvtec/bottle/test/good' + "/*.png"))
 
         for img in images:
-            test_img, rec_img, ssim_residual_map, l1_residual_map = self.get_residual_map(img)
+            test_img, rec_img, ssim_residual_map = self.get_residual_map(img)
             depr_mask = self.get_depressing_mask()
             ssim_residual_map *= depr_mask
-            l1_residual_map *= depr_mask
 
             mask = np.zeros((self.mask_size, self.mask_size))
-            mask[ssim_residual_map > self.test_cfg.ssim_threshold] = 1
-            mask[l1_residual_map > self.test_cfg.l1_threshold] = 1
+            mask[ssim_residual_map > ssim_threshold] = 1
 
             kernel = morphology.disk(4)
             mask = morphology.opening(mask, kernel)
             mask *= 255
+            mask = cv2.threshold(mask, 128, 255, cv2.THRESH_BINARY)[1]
 
-            vis_img = set_img_color(test_img.copy(), mask, weight_foreground=0.3)
+            gt = np.zeros((mask.shape[0], mask.shape[1]))  # Assuming anomalies in the ground truth are represented by 1
+            mask = mask.ravel()
+            gt = gt.ravel()
 
-            self.plot_results(test_img, rec_img, mask, vis_img)
+            CM = confusion_matrix(gt, mask)
+
+            # Extract True Negative (TN), False Positive (FP), False Negative (FN), True Positive (TP)
+            TN, FP, FN, TP = CM.ravel()
+
+            fpr, tpr, _ = roc_curve(gt, mask)
+            tpr = TP / (TP + FN) if (TP + FN) != 0 else 0
+            roc_auc = auc(fpr, tpr)
+
+            print('ROC AUC', roc_auc)
+            # vis_img = set_img_color(test_img.copy(), mask, weight_foreground=0.3)
+            #
+            # self.plot_results(test_img, rec_img, mask, vis_img)
 
 
 if __name__ == '__main__':
-    autoencoder = TestAutoEncoder()
-    autoencoder.get_results()
+    try:
+        autoencoder = TestAutoEncoder()
+        # for i in np.arange(0, 1.1, 0.1):
+        autoencoder.get_results(0.4)
+    except KeyboardInterrupt as kie:
+        logging.error(kie)
