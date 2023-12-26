@@ -12,7 +12,7 @@ def network_configs():
             'stride':
                 [1, 2],
             'padding':
-                1,
+                [0, 1],
             'flc':
                 [32, 64, 128],
             "alpha_slope":

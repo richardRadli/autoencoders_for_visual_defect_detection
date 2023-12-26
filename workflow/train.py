@@ -84,8 +84,17 @@ class TrainAutoEncoder:
             )
         )
 
+    # ------------------------------------------------------------------------------------------------------------------
+    # --------------------------------------- G E T   L O S S   F U N C T I O N ----------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
     @staticmethod
     def get_loss_function(loss_function_type):
+        """
+
+        :param loss_function_type:
+        :return:
+        """
+
         loss_functions = {
             "mse": nn.MSELoss(),
             "ssim": SSIMLoss()
@@ -100,13 +109,27 @@ class TrainAutoEncoder:
     # ---------------------------------------- C R E A T E   S A V E   D I R S -----------------------------------------
     # ------------------------------------------------------------------------------------------------------------------
     def create_save_dirs(self, directory_path):
+        """
+
+        :param directory_path:
+        :return:
+        """
+
         directory_to_create = (
             os.path.join(directory_path, self.train_cfg.network_type, f"{self.timestamp}")
         )
         os.makedirs(directory_to_create, exist_ok=True)
         return directory_to_create
 
+    # ------------------------------------------------------------------------------------------------------------------
+    # --------------------------------------------------- T R A I N ----------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
     def train(self):
+        """
+
+        :return:
+        """
+
         best_valid_loss = float('inf')
         best_model_path = None
 
@@ -138,7 +161,8 @@ class TrainAutoEncoder:
                     valid_loss = self.criterion(outputs, images)
                     valid_losses.append(valid_loss.item())
 
-            self.scheduler.step()
+            if self.train_cfg.decrease_learning_rate:
+                self.scheduler.step()
 
             train_loss_avg = np.average(train_losses)
             valid_loss_avg = np.average(valid_losses)
@@ -164,6 +188,9 @@ class TrainAutoEncoder:
         self.writer.flush()
 
 
+# ----------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------ M A I N -------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
     try:
         ae = TrainAutoEncoder()
