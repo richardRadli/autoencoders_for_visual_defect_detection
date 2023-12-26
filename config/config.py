@@ -53,9 +53,13 @@ class ConfigTesting:
         self.parser = argparse.ArgumentParser()
 
         self.parser.add_argument('--network_type', type=str, default='BASE', choices=['BASE', 'EXTENDED'])
+        self.parser.add_argument("--dataset_type", type=str, default="bottle", choices=["bottle", "cable"])
         self.parser.add_argument('--img_size', type=tuple, default=(256, 256), help='image size')
         self.parser.add_argument('--crop_size', type=tuple, default=(128, 128), help='')
         self.parser.add_argument('--stride', type=int, default=32, help='stride')
+        self.parser.add_argument('--bg_mask', type=str, default="B", choices=["B", "W"])
+        self.parser.add_argument('--ssim_threshold', type=float, default=0.5, help='ssim threshold for testing')
+        self.parser.add_argument('--l1_threshold', type=float, default=0.5, help='l1 threshold for testing')
 
     def parse(self):
         self.opt = self.parser.parse_args()

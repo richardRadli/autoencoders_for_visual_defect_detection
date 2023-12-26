@@ -204,3 +204,67 @@ def patch2img(patches, im_size, patch_size, stride):
     mask = np.repeat(img[:, :, -1][..., np.newaxis], patches.shape[3], 2)
     img = img[:, :, :-1] / mask
     return img
+
+
+def fill_hole(mask):
+    contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    len_contour = len(contours)
+    contour_list = []
+    for i in range(len_contour):
+        drawing = np.zeros_like(mask, np.uint8)  # create a black image
+        img_contour = cv2.drawContours(drawing, contours, i, (255, 255, 255), -1)
+        contour_list.append(img_contour)
+
+    out = sum(contour_list)
+    return out
+
+
+def bg_mask(img, value, mode):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    _, thresh = cv2.threshold(img, value, 255, mode)
+    thresh = fill_hole(thresh)
+    if type(thresh) is int:
+        return np.ones(img.shape)
+    mask_ = np.ones(thresh.shape)
+    mask_[np.where(thresh <= 127)] = 0
+    return mask_
+
+
+def set_img_color(img, predict_mask, weight_foreground):
+    origin = img
+    img[np.where(predict_mask == 255)] = (0, 0, 255)
+    cv2.addWeighted(img, weight_foreground, origin, (1 - weight_foreground), 0, img)
+    return img
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# ----------------------- F I N D   L A T E S T   F I L E   I N   L A T E S T   D I R E C T O R Y ----------------------
+# ----------------------------------------------------------------------------------------------------------------------
+def find_latest_file_in_latest_directory(path: str) -> str:
+    """
+    Finds the latest file in the latest directory within the given path.
+
+    :param path: str, the path to the directory where we should look for the latest file
+    :param type_of_network:
+    :return: str, the path to the latest file
+    :raise: when no directories or files found
+    """
+
+    dirs = [os.path.join(path, d) for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
+
+    if not dirs:
+        raise ValueError(f"No directories found in {path}")
+
+    dirs.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    latest_dir = dirs[0]
+    files = [os.path.join(latest_dir, f) for f in os.listdir(latest_dir) if
+             os.path.isfile(os.path.join(latest_dir, f))]
+
+    if not files:
+        raise ValueError(f"No files found in {latest_dir}")
+
+    files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    latest_file = files[0]
+    logging.info(f"The latest file is {latest_file}")
+
+    return latest_file

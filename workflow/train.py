@@ -31,9 +31,7 @@ class TrainAutoEncoder:
         self.train_cfg = ConfigTraining().parse()
         network_cfg = network_configs().get(self.train_cfg.network_type)
 
-        dataset = MVTecDataset(root_dir=dataset_images_path_selector().get(self.train_cfg.dataset_type).get("aug"),
-                               img_size=self.train_cfg.crop_size,
-                               )
+        dataset = MVTecDataset(root_dir=dataset_images_path_selector().get(self.train_cfg.dataset_type).get("aug"))
 
         dataset_size = len(dataset)
         val_size = int(self.train_cfg.validation_split * dataset_size)

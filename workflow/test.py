@@ -1,14 +1,18 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import torch
 
+from glob import glob
+from skimage import morphology
 from skimage.metrics import structural_similarity as ssim
 
 from config.config import ConfigTesting
-from config.network_config import network_configs
+from config.network_config import network_configs, dataset_data_path_selector
 from models.network_selector import NetworkFactory
-from utils.utils import setup_logger, use_gpu_if_available, get_patch, patch2img
+from utils.utils import (setup_logger, use_gpu_if_available, get_patch, patch2img, set_img_color,
+                         find_latest_file_in_latest_directory)
 
 
 class TestAutoEncoder:
@@ -17,27 +21,36 @@ class TestAutoEncoder:
         self.test_cfg = ConfigTesting().parse()
         network_cfg = network_configs().get(self.test_cfg.network_type)
 
-        self.device = "cpu" #use_gpu_if_available()
+        self.mask_size = self.test_cfg.patch_size \
+            if self.test_cfg.img_size[0] - self.test_cfg.crop_size[0] < self.test_cfg.stride \
+            else self.test_cfg.img_size[0]
+
+        self.device = "cpu"  # use_gpu_if_available()
         self.model = NetworkFactory.create_network(network_type=self.test_cfg.network_type,
                                                    network_cfg=network_cfg,
                                                    device=self.device)
 
-        state_dict = torch.load("D:/AE/storage/weights/bottle_model_weights/BASE/2023-12-25_17-22-46/epoch_81.pt")
+        state_dict = torch.load(
+            find_latest_file_in_latest_directory(
+                path=str(os.path.join(
+                    dataset_data_path_selector().get(self.test_cfg.dataset_type).get("model_weights_dir"),
+                    self.test_cfg.network_type)
+                )
+            )
+        )
+
         self.model.load_state_dict(state_dict)
         self.model.to(self.device)
         self.model.eval()
 
-    def get_residual_map(self):
-        test_img = cv2.imread("D:/mvtec/bottle/test/contamination/000.png")
-        mask_size = self.test_cfg.patch_size \
-            if self.test_cfg.img_size[0] - self.test_cfg.crop_size[0] < self.test_cfg.stride \
-            else self.test_cfg.img_size[0]
+    def get_residual_map(self, test_img_path):
+        test_img = cv2.imread(test_img_path)
 
         if test_img.shape[:2] != self.test_cfg.img_size:
             test_img = cv2.resize(test_img, self.test_cfg.img_size)
-        if self.test_cfg.img_size[0] != mask_size:
-            tmp = (self.test_cfg.img_size[0] - mask_size) // 2
-            test_img = test_img[tmp:tmp + mask_size, tmp:tmp + mask_size]
+        if self.test_cfg.img_size[0] != self.mask_size:
+            tmp = (self.test_cfg.img_size[0] - self.mask_size) // 2
+            test_img = test_img[tmp:tmp + self.mask_size, tmp:tmp + self.mask_size]
 
         test_img_ = test_img / 255.
 
@@ -60,33 +73,58 @@ class TestAutoEncoder:
 
         return test_img, rec_img, ssim_residual_map, l1_residual_map
 
-    def plot_results(self):
-        # Plot RGB images (test_img and rec_img)
+    def get_depressing_mask(self):
+        depr_mask = np.ones((self.mask_size, self.mask_size)) * 0.2
+        depr_mask[5:self.mask_size - 5, 5:self.mask_size - 5] = 1
+        return depr_mask
+
+    @staticmethod
+    def plot_results(test_img, rec_img, mask, vis_img):
+        test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
+        rec_img = cv2.cvtColor(rec_img, cv2.COLOR_BGR2RGB)
+        vis_img = cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB)
+
         plt.subplot(2, 2, 1)
         plt.imshow(test_img)
-        plt.title('test_img (RGB)')
+        plt.title('test_img')
 
         plt.subplot(2, 2, 2)
         plt.imshow(rec_img)
-        plt.title('rec_img (RGB)')
+        plt.title('rec_img')
 
-        # Plot grayscale images (ssim_residual_map and l1_residual_map)
         plt.subplot(2, 2, 3)
-        plt.imshow(ssim_residual_map, cmap='gray')
-        plt.title('SSIM Residual Map (Grayscale)')
+        plt.imshow(mask, cmap='gray')
+        plt.title('mask')
 
         plt.subplot(2, 2, 4)
-        plt.imshow(l1_residual_map, cmap='gray')
-        plt.title('L1 Residual Map (Grayscale)')
+        plt.imshow(vis_img, cmap='gray')
+        plt.title('vis_img')
 
-        # Adjust layout for better visualization
         plt.tight_layout()
-
-        # Show the plot
         plt.show()
+
+    def get_results(self):
+        images = sorted(glob('D:/mvtec/bottle/test/good' + "/*.png"))
+
+        for img in images:
+            test_img, rec_img, ssim_residual_map, l1_residual_map = self.get_residual_map(img)
+            depr_mask = self.get_depressing_mask()
+            ssim_residual_map *= depr_mask
+            l1_residual_map *= depr_mask
+
+            mask = np.zeros((self.mask_size, self.mask_size))
+            mask[ssim_residual_map > self.test_cfg.ssim_threshold] = 1
+            mask[l1_residual_map > self.test_cfg.l1_threshold] = 1
+
+            kernel = morphology.disk(4)
+            mask = morphology.opening(mask, kernel)
+            mask *= 255
+
+            vis_img = set_img_color(test_img.copy(), mask, weight_foreground=0.3)
+
+            self.plot_results(test_img, rec_img, mask, vis_img)
 
 
 if __name__ == '__main__':
     autoencoder = TestAutoEncoder()
-    test_img, rec_img, ssim_residual_map, l1_residual_map = autoencoder.get_residual_map()
-
+    autoencoder.get_results()
