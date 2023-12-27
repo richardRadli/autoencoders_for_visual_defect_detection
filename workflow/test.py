@@ -126,9 +126,11 @@ class TestAutoEncoder:
         sorted_fpr = fpr_array[sorted_indices]
         sorted_tpr = tpr_array[sorted_indices]
 
-        auc_roc = abs(np.trapz(y=sorted_fpr, x=sorted_tpr))
+        auc_roc = np.trapz(sorted_tpr, sorted_fpr)
 
-        plt.plot(sorted_fpr, sorted_tpr, label='ROC Curve')
+        plt.plot(sorted_fpr, sorted_tpr, label=f'ROC Curve (AUC = {auc_roc:.2f})')
+        plt.scatter(sorted_fpr, sorted_tpr, c='blue', marker='.')
+        plt.grid(True)
         plt.xlabel('False Positive Rate (FPR)')
         plt.ylabel('True Positive Rate (TPR)')
         plt.title('Receiver Operating Characteristic (ROC) Curve')

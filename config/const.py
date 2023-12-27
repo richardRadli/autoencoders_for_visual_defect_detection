@@ -52,12 +52,12 @@ class Data(_Const):
         "texture_1_model_weights_dir":
             "weights/texture_1_model_weights",
         "texture_1_log_dir":
-            "logs/texture_1_model_weights",
+            "logs/texture_1_model_logs",
 
         "texture_2_model_weights_dir":
             "weights/texture_2_model_weights",
         "texture_2_log_dir":
-            "logs/texture_2_model_weights"
+            "logs/texture_2_model_logs"
     }
 
     # ------------------------------------------------------------------------------------------------------------------

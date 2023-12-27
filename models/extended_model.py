@@ -12,7 +12,7 @@ class ExtendedAutoEncoder(nn.Module):
                       out_channels=self.cfg.get("flc")[0],
                       kernel_size=self.cfg.get("kernel_size")[0],
                       stride=self.cfg.get("stride")[1],
-                      padding=self.cfg.get("padding")),
+                      padding=self.cfg.get("padding")[1]),
             nn.LeakyReLU(negative_slope=self.cfg.get("alpha_slope")),
             nn.Conv2d(in_channels=self.cfg.get("flc")[0], 
                       out_channels=self.cfg.get("flc")[0], 
@@ -174,9 +174,4 @@ class ExtendedAutoEncoder(nn.Module):
     def forward(self, x):
         encoded = self.encoder(x)
         decoded = self.decoder(encoded)
-        decoded = nn.functional.interpolate(input=decoded,
-                                            size=self.cfg.get("img_size"),
-                                            mode='bilinear',
-                                            align_corners=False)
         return decoded
-
