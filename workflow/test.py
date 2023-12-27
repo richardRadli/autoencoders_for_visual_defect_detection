@@ -9,10 +9,11 @@ import torch
 from glob import glob
 from skimage import morphology
 from skimage.metrics import structural_similarity as ssim
-from sklearn.metrics import confusion_matrix, roc_curve, auc
+from sklearn.metrics import confusion_matrix
+from tqdm import tqdm
 
 from config.config import ConfigTesting
-from config.network_config import network_configs, dataset_data_path_selector
+from config.network_config import network_configs, dataset_data_path_selector, dataset_images_path_selector
 from models.network_selector import NetworkFactory
 from utils.utils import (setup_logger, use_gpu_if_available, get_patch, patch2img, set_img_color,
                          find_latest_file_in_latest_directory)
@@ -27,6 +28,12 @@ class TestAutoEncoder:
         self.mask_size = self.test_cfg.patch_size \
             if self.test_cfg.img_size[0] - self.test_cfg.crop_size[0] < self.test_cfg.stride \
             else self.test_cfg.img_size[0]
+
+        test_dataset_path = (dataset_images_path_selector().get(self.test_cfg.dataset_type).get("test"))
+        self.test_images = sorted(glob(os.path.join(test_dataset_path, "*.png")))
+
+        gt_dataset_path = (dataset_images_path_selector().get(self.test_cfg.dataset_type).get("gt"))
+        self.gt_images = sorted(glob(os.path.join(gt_dataset_path, "*.png")))
 
         self.device = use_gpu_if_available()
         self.model = NetworkFactory.create_network(network_type=self.test_cfg.network_type,
@@ -105,11 +112,39 @@ class TestAutoEncoder:
         plt.tight_layout()
         plt.show()
 
-    def get_results(self, ssim_threshold):
-        images = sorted(glob('D:/mvtec/bottle/test/good' + "/*.png"))
+    @staticmethod
+    def threshold_calculator(start: float, end: float, number_of_steps: float):
+        step = end / number_of_steps
+        return np.arange(start=start, stop=end, step=step)
 
-        for img in images:
-            test_img, rec_img, ssim_residual_map = self.get_residual_map(img)
+    @staticmethod
+    def plot_average_roc(all_fpr, all_tpr):
+        tpr_array = np.array(all_tpr)
+        fpr_array = np.array(all_fpr)
+
+        sorted_indices = np.argsort(fpr_array)
+        sorted_fpr = fpr_array[sorted_indices]
+        sorted_tpr = tpr_array[sorted_indices]
+
+        auc_roc = abs(np.trapz(y=sorted_fpr, x=sorted_tpr))
+
+        plt.plot(sorted_fpr, sorted_tpr, label='ROC Curve')
+        plt.xlabel('False Positive Rate (FPR)')
+        plt.ylabel('True Positive Rate (TPR)')
+        plt.title('Receiver Operating Characteristic (ROC) Curve')
+        plt.legend()
+        plt.show()
+
+    @staticmethod
+    def avg_of_list(my_list):
+        return sum(my_list) / len(my_list)
+
+    def get_results(self, ssim_threshold):
+        all_fpr = []
+        all_tpr = []
+
+        for idx, (test_img, gt_img) in enumerate(zip(self.test_images, self.gt_images)):
+            test_img, rec_img, ssim_residual_map = self.get_residual_map(test_img)
             depr_mask = self.get_depressing_mask()
             ssim_residual_map *= depr_mask
 
@@ -119,31 +154,51 @@ class TestAutoEncoder:
             kernel = morphology.disk(4)
             mask = morphology.opening(mask, kernel)
             mask *= 255
+            mask_copy = mask
             mask = cv2.threshold(mask, 128, 255, cv2.THRESH_BINARY)[1]
+            mask = np.uint8(mask.ravel())
+            mask = np.where(mask == 255, 1, 0)
 
-            gt = np.zeros((mask.shape[0], mask.shape[1]))  # Assuming anomalies in the ground truth are represented by 1
-            mask = mask.ravel()
+            gt = cv2.imread(gt_img, 0)
+            gt = cv2.resize(gt, self.test_cfg.img_size)
+            gt = cv2.threshold(gt, 128, 255, cv2.THRESH_BINARY)[1]
             gt = gt.ravel()
+            gt = np.where(gt == 255, 1, 0)
 
-            CM = confusion_matrix(gt, mask)
+            conf_mtx = confusion_matrix(gt, mask)
 
-            # Extract True Negative (TN), False Positive (FP), False Negative (FN), True Positive (TP)
-            TN, FP, FN, TP = CM.ravel()
+            true_neg = conf_mtx[0][0]
+            false_pos = conf_mtx[0][1]
+            false_neg = conf_mtx[1][0]
+            true_pos = conf_mtx[1][1]
 
-            fpr, tpr, _ = roc_curve(gt, mask)
-            tpr = TP / (TP + FN) if (TP + FN) != 0 else 0
-            roc_auc = auc(fpr, tpr)
+            # FPR
+            false_pos_rate = false_pos / (false_pos + true_neg)
+            all_fpr.append(false_pos_rate)
 
-            print('ROC AUC', roc_auc)
-            # vis_img = set_img_color(test_img.copy(), mask, weight_foreground=0.3)
-            #
-            # self.plot_results(test_img, rec_img, mask, vis_img)
+            # TPR
+            true_pos_rate = 0
+            if true_pos != 0 or false_neg != 0:
+                true_pos_rate = true_pos / (true_pos + false_neg)
+            all_tpr.append(true_pos_rate)
+
+            if self.test_cfg.vis_results:
+                vis_img = set_img_color(test_img.copy(), mask_copy, weight_foreground=0.3)
+                self.plot_results(test_img, rec_img, mask_copy, vis_img)
+
+        return self.avg_of_list(all_fpr), self.avg_of_list(all_tpr)
 
 
 if __name__ == '__main__':
     try:
         autoencoder = TestAutoEncoder()
-        # for i in np.arange(0, 1.1, 0.1):
-        autoencoder.get_results(0.4)
+        threshold_range = autoencoder.threshold_calculator(start=0.01, end=1.01, number_of_steps=101)
+
+        fpr_list, tpr_list = [], []
+        for ssim_tresh in tqdm(threshold_range):
+            fpr, tpr = autoencoder.get_results(ssim_tresh)
+            fpr_list.append(fpr)
+            tpr_list.append(tpr)
+        autoencoder.plot_average_roc(fpr_list, tpr_list)
     except KeyboardInterrupt as kie:
         logging.error(kie)

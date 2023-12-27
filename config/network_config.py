@@ -71,12 +71,14 @@ def dataset_images_path_selector():
         "texture_1": {
             "train": DATASET_PATH.get_data_path("texture_1_train"),
             "aug": DATASET_PATH.get_data_path("texture_1_aug"),
-            "gt": DATASET_PATH.get_data_path("texture_1_gt_defective")
+            "gt": DATASET_PATH.get_data_path("texture_1_gt_defective"),
+            "test": DATASET_PATH.get_data_path("texture_1_test_defective")
         },
         "texture_2": {
             "train": DATASET_PATH.get_data_path("texture_2_train"),
             "aug": DATASET_PATH.get_data_path("texture_2_aug"),
-            "gt": DATASET_PATH.get_data_path("texture_2_gt_defective")
+            "gt": DATASET_PATH.get_data_path("texture_2_gt_defective"),
+            "test": DATASET_PATH.get_data_path("texture_2_test_defective")
         }
     }
 

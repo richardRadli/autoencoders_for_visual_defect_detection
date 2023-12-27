@@ -55,6 +55,7 @@ class ConfigTesting:
 
         self.parser.add_argument('--network_type', type=str, default='BASE', choices=['BASE', 'EXTENDED'])
         self.parser.add_argument("--dataset_type", type=str, default="texture_1", choices=["texture_1", "cable"])
+        self.parser.add_argument("--vis_results", type=bool, default=False)
         self.parser.add_argument('--img_size', type=tuple, default=(256, 256), help='image size')
         self.parser.add_argument('--crop_size', type=tuple, default=(128, 128), help='')
         self.parser.add_argument('--stride', type=int, default=32, help='stride')
