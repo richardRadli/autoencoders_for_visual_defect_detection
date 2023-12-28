@@ -285,3 +285,13 @@ def create_save_dirs(directory_path, network_type, timestamp):
     )
     os.makedirs(directory_to_create, exist_ok=True)
     return directory_to_create
+
+
+def avg_of_list(my_list):
+    """
+
+    :param my_list:
+    :return:
+    """
+
+    return sum(my_list) / len(my_list)

@@ -51,9 +51,13 @@ class Images(_Const):
     dirs_data = {
         "texture_1_training_vis":
             "images/texture_1_training_vis",
+        "texture_1_roc_plot":
+            "images/texture_1_roc_plot",
 
         "texture_2_training_vis":
-            "images/texture_2_training_vis"
+            "images/texture_2_training_vis",
+        "texture_2_roc_plot":
+            "images/texture_2_roc_plot"
     }
 
     # ------------------------------------------------------------------------------------------------------------------

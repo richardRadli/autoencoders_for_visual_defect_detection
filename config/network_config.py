@@ -91,7 +91,9 @@ def dataset_data_path_selector():
             "log_dir":
                 DATA_PATH.get_data_path("texture_1_log_dir"),
             "training_vis":
-                IMAGES_PATH.get_data_path("texture_1_training_vis")
+                IMAGES_PATH.get_data_path("texture_1_training_vis"),
+            "roc_plot":
+                IMAGES_PATH.get_data_path("texture_1_roc_plot")
 
         },
         "texture_2": {
@@ -100,7 +102,9 @@ def dataset_data_path_selector():
             "log_dir":
                 DATA_PATH.get_data_path("texture_2_log_dir"),
             "training_vis":
-                IMAGES_PATH.get_data_path("texture_2_training_vis")
+                IMAGES_PATH.get_data_path("texture_2_training_vis"),
+            "roc_plot":
+                IMAGES_PATH.get_data_path("texture_2_roc_plot")
         }
     }
 

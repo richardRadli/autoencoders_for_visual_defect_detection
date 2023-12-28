@@ -3,7 +3,6 @@ import logging
 import numpy as np
 import os
 import torch
-
 import torch.optim as optim
 
 from tqdm import tqdm
@@ -16,7 +15,6 @@ from config.config import ConfigTraining
 from config.network_config import network_configs, dataset_images_path_selector, dataset_data_path_selector
 from data_loader_ae import MVTecDataset
 from models.network_selector import NetworkFactory
-
 from utils.utils import create_timestamp, use_gpu_if_available, setup_logger, get_loss_function, create_save_dirs, \
     visualize_images
 
@@ -127,7 +125,9 @@ class TrainAutoEncoder:
 
                 if self.train_cfg.vis_during_training and (epoch % self.train_cfg.vis_interval == 0) and batch_idx == 0:
                     vis_dir = create_save_dirs(
-                        directory_path=dataset_data_path_selector().get(self.train_cfg.dataset_type).get("training_vis"),
+                        directory_path=dataset_data_path_selector().get(self.train_cfg.dataset_type).get(
+                            "training_vis"
+                        ),
                         network_type=self.network_type,
                         timestamp=self.timestamp
                     )

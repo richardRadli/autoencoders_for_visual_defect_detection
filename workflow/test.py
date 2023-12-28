@@ -1,6 +1,5 @@
-import logging
-
 import cv2
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -15,12 +14,13 @@ from tqdm import tqdm
 from config.config import ConfigTesting
 from config.network_config import network_configs, dataset_data_path_selector, dataset_images_path_selector
 from models.network_selector import NetworkFactory
-from utils.utils import (setup_logger, use_gpu_if_available, get_patch, patch2img, set_img_color,
-                         find_latest_file_in_latest_directory)
+from utils.utils import (setup_logger, use_gpu_if_available, get_patch, patch2img, set_img_color, avg_of_list,
+                         find_latest_file_in_latest_directory, create_save_dirs, create_timestamp)
 
 
 class TestAutoEncoder:
     def __init__(self):
+        timestamp = create_timestamp()
         self.logger = setup_logger()
         self.test_cfg = ConfigTesting().parse()
         network_cfg = network_configs().get(self.test_cfg.network_type)
@@ -34,6 +34,11 @@ class TestAutoEncoder:
 
         gt_dataset_path = (dataset_images_path_selector().get(self.test_cfg.dataset_type).get("gt"))
         self.gt_images = sorted(glob(os.path.join(gt_dataset_path, "*.png")))
+
+        roc_dir = dataset_data_path_selector().get(self.test_cfg.dataset_type).get("roc_plot")
+        self.save_roc_plot_dir = create_save_dirs(directory_path=roc_dir,
+                                                  network_type=self.test_cfg.network_type,
+                                                  timestamp=timestamp)
 
         self.device = use_gpu_if_available()
         self.model = NetworkFactory.create_network(network_type=self.test_cfg.network_type,
@@ -54,6 +59,12 @@ class TestAutoEncoder:
         self.model.eval()
 
     def get_residual_map(self, test_img_path):
+        """
+
+        :param test_img_path:
+        :return:
+        """
+
         test_img = cv2.imread(test_img_path)
 
         if test_img.shape[:2] != self.test_cfg.img_size:
@@ -84,12 +95,26 @@ class TestAutoEncoder:
         return test_img, rec_img, ssim_residual_map
 
     def get_depressing_mask(self):
+        """
+
+        :return:
+        """
+
         depr_mask = np.ones((self.mask_size, self.mask_size)) * 0.2
         depr_mask[5:self.mask_size - 5, 5:self.mask_size - 5] = 1
         return depr_mask
 
-    @staticmethod
-    def plot_results(test_img, rec_img, mask, vis_img):
+    def plot_results(self, test_img, rec_img, mask, vis_img):
+        """
+
+        :param test_img:
+        :param rec_img:
+        :param mask:
+        :param vis_img:
+        :return:
+        """
+
+        filename = os.path.join(self.save_roc_plot_dir, "roc.png")
         test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
         vis_img = cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB)
 
@@ -110,15 +135,31 @@ class TestAutoEncoder:
         plt.title('vis_img')
 
         plt.tight_layout()
-        plt.show()
+        plt.savefig(filename)
+        plt.close()
 
     @staticmethod
     def threshold_calculator(start: float, end: float, number_of_steps: float):
+        """
+
+        :param start:
+        :param end:
+        :param number_of_steps:
+        :return:
+        """
+
         step = end / number_of_steps
         return np.arange(start=start, stop=end, step=step)
 
     @staticmethod
     def plot_average_roc(all_fpr, all_tpr):
+        """
+
+        :param all_fpr:
+        :param all_tpr:
+        :return:
+        """
+
         tpr_array = np.array(all_tpr)
         fpr_array = np.array(all_fpr)
 
@@ -137,11 +178,13 @@ class TestAutoEncoder:
         plt.legend()
         plt.show()
 
-    @staticmethod
-    def avg_of_list(my_list):
-        return sum(my_list) / len(my_list)
-
     def get_results(self, ssim_threshold):
+        """
+
+        :param ssim_threshold:
+        :return:
+        """
+
         all_fpr = []
         all_tpr = []
 
@@ -188,7 +231,7 @@ class TestAutoEncoder:
                 vis_img = set_img_color(test_img.copy(), mask_copy, weight_foreground=0.3)
                 self.plot_results(test_img, rec_img, mask_copy, vis_img)
 
-        return self.avg_of_list(all_fpr), self.avg_of_list(all_tpr)
+        return avg_of_list(all_fpr), avg_of_list(all_tpr)
 
 
 if __name__ == '__main__':
