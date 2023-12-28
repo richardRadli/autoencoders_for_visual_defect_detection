@@ -7,10 +7,13 @@ import os
 import pandas as pd
 import time
 import torch
+import torch.nn as nn
 import torchvision
 
 from datetime import datetime
 from functools import wraps
+
+from utils.ssim_loss import SSIMLoss
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -214,23 +217,68 @@ def measure_execution_time(func):
     return wrapper
 
 
-def visualize_images(clean_images, noise_images, outputs, epoch, batch_idx):
+def visualize_images(clean_images, outputs, epoch, batch_idx, noise_images=None):
     clean_images_grid = torchvision.utils.make_grid(clean_images.cpu(), nrow=8, normalize=True)
-    noise_images_grid = torchvision.utils.make_grid(noise_images.cpu(), nrow=8, normalize=True)
+    noise_images_grid = None
+    if noise_images is not None:
+        noise_images_grid = torchvision.utils.make_grid(noise_images.cpu(), nrow=8, normalize=True)
     outputs_grid = torchvision.utils.make_grid(outputs.cpu(), nrow=8, normalize=True)
 
     plt.figure(figsize=(12, 12))
 
-    plt.subplot(3, 1, 1)
+    num_of_rows = 3 if noise_images is not None else 2
+
+    plt.subplot(num_of_rows, 1, 1)
     plt.imshow(clean_images_grid.permute(1, 2, 0))
     plt.title(f'Clean Images - Epoch {epoch}, Batch {batch_idx}')
 
-    plt.subplot(3, 1, 2)
-    plt.imshow(noise_images_grid.permute(1, 2, 0))
-    plt.title(f'Noisy Images - Epoch {epoch}, Batch {batch_idx}')
+    if noise_images is not None:
+        plt.subplot(num_of_rows, 1, 2)
+        plt.imshow(noise_images_grid.permute(1, 2, 0))
+        plt.title(f'Noisy Images - Epoch {epoch}, Batch {batch_idx}')
 
-    plt.subplot(3, 1, 3)
+    plt.subplot(num_of_rows, 1, num_of_rows)
     plt.imshow(outputs_grid.permute(1, 2, 0))
     plt.title(f'Reconstructed Images - Epoch {epoch}, Batch {batch_idx}')
 
     plt.show()
+
+
+# ------------------------------------------------------------------------------------------------------------------
+# --------------------------------------- G E T   L O S S   F U N C T I O N ----------------------------------------
+# ------------------------------------------------------------------------------------------------------------------
+def get_loss_function(loss_function_type):
+    """
+
+    :param loss_function_type:
+    :return:
+    """
+
+    loss_functions = {
+        "mse": nn.MSELoss(),
+        "ssim": SSIMLoss()
+    }
+
+    if loss_function_type in loss_functions:
+        return loss_functions[loss_function_type]
+    else:
+        raise ValueError(f"Wrong loss function type {loss_function_type}")
+
+
+# ------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------- C R E A T E   S A V E   D I R S -----------------------------------------
+# ------------------------------------------------------------------------------------------------------------------
+def create_save_dirs(directory_path, network_type, timestamp):
+    """
+
+    :param directory_path:
+    :param network_type:
+    :param timestamp:
+    :return:
+    """
+
+    directory_to_create = (
+        os.path.join(directory_path, network_type, f"{timestamp}")
+    )
+    os.makedirs(directory_to_create, exist_ok=True)
+    return directory_to_create

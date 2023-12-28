@@ -3,7 +3,6 @@ import logging
 import os
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.optim as optim
 
 from tqdm import tqdm
@@ -16,24 +15,26 @@ from config.config import ConfigTraining
 from config.network_config import network_configs, dataset_images_path_selector, dataset_data_path_selector
 from data_loader_dae import MVTecDataset
 from models.network_selector import NetworkFactory
-from ssim_loss import SSIMLoss
-from utils.utils import create_timestamp, use_gpu_if_available, setup_logger, visualize_images
+from utils.utils import create_timestamp, use_gpu_if_available, setup_logger, create_save_dirs, get_loss_function, \
+    visualize_images
 
 
 class TrainDenoisingAutoEncoder:
     def __init__(self):
-        self.logger = setup_logger()
-
-        colorama.init()
-
-        self.timestamp = create_timestamp()
-
         self.train_cfg = ConfigTraining().parse()
+        if self.train_cfg.network_type not in ["DAE", "DAEE"]:
+            raise ValueError(f"wrong network type: {self.train_cfg}")
+
+        # Config initialize
+        timestamp = create_timestamp()
+        setup_logger()
+        network_type = self.train_cfg.network_type
+        colorama.init()
         network_cfg = network_configs().get(self.train_cfg.network_type)
 
+        # Setup dataset
         dataset = MVTecDataset(root_dir=dataset_images_path_selector().get(self.train_cfg.dataset_type).get("aug"),
                                noise_dir=dataset_images_path_selector().get(self.train_cfg.dataset_type).get("noise"))
-
         dataset_size = len(dataset)
         val_size = int(self.train_cfg.validation_split * dataset_size)
         train_size = dataset_size - val_size
@@ -50,6 +51,7 @@ class TrainDenoisingAutoEncoder:
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
 
+        # Setup model
         self.model = NetworkFactory.create_network(network_type=self.train_cfg.network_type,
                                                    network_cfg=network_cfg,
                                                    device="cuda")
@@ -60,7 +62,8 @@ class TrainDenoisingAutoEncoder:
             )
         )
 
-        self.criterion = self.get_loss_function(self.train_cfg.loss_function_type)
+        # Setup loss function, optimizer, LR scheduler and device
+        self.criterion = get_loss_function(self.train_cfg.loss_function_type)
 
         self.optimizer = optim.Adam(params=self.model.parameters(),
                                     lr=self.train_cfg.learning_rate,
@@ -72,55 +75,24 @@ class TrainDenoisingAutoEncoder:
 
         self.device = use_gpu_if_available()
 
+        # Setup directories to save data
         tensorboard_log_dir = (
-            self.create_save_dirs(
-                dataset_data_path_selector().get(self.train_cfg.dataset_type).get("log_dir")
+            create_save_dirs(
+                directory_path=dataset_data_path_selector().get(self.train_cfg.dataset_type).get("log_dir"),
+                network_type=network_type,
+                timestamp=timestamp
             )
         )
+
         self.writer = SummaryWriter(log_dir=str(tensorboard_log_dir))
 
         self.save_path = (
-            self.create_save_dirs(
-                dataset_data_path_selector().get(self.train_cfg.dataset_type).get("model_weights_dir")
+            create_save_dirs(
+                directory_path=dataset_data_path_selector().get(self.train_cfg.dataset_type).get("model_weights_dir"),
+                network_type=network_type,
+                timestamp=timestamp
             )
         )
-
-    # ------------------------------------------------------------------------------------------------------------------
-    # --------------------------------------- G E T   L O S S   F U N C T I O N ----------------------------------------
-    # ------------------------------------------------------------------------------------------------------------------
-    @staticmethod
-    def get_loss_function(loss_function_type):
-        """
-
-        :param loss_function_type:
-        :return:
-        """
-
-        loss_functions = {
-            "mse": nn.MSELoss(),
-            "ssim": SSIMLoss()
-        }
-
-        if loss_function_type in loss_functions:
-            return loss_functions[loss_function_type]
-        else:
-            raise ValueError(f"Wrong loss function type {loss_function_type}")
-
-    # ------------------------------------------------------------------------------------------------------------------
-    # ---------------------------------------- C R E A T E   S A V E   D I R S -----------------------------------------
-    # ------------------------------------------------------------------------------------------------------------------
-    def create_save_dirs(self, directory_path):
-        """
-
-        :param directory_path:
-        :return:
-        """
-
-        directory_to_create = (
-            os.path.join(directory_path, self.train_cfg.network_type, f"{self.timestamp}")
-        )
-        os.makedirs(directory_to_create, exist_ok=True)
-        return directory_to_create
 
     def train(self):
         """
@@ -150,7 +122,12 @@ class TrainDenoisingAutoEncoder:
                 self.optimizer.step()
                 train_losses.append(train_loss.item())
 
-                # visualize_images(images, noise_images, outputs, epoch, batch_idx)
+                if self.train_cfg.vis_during_training and (epoch % self.train_cfg.vis_interval):
+                    visualize_images(clean_images=images,
+                                     noise_images=noise_images,
+                                     outputs=outputs,
+                                     epoch=epoch,
+                                     batch_idx=batch_idx)
 
             with torch.no_grad():
                 for batch_idx, (images, noise_images) in tqdm(enumerate(self.val_dataloader),

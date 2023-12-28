@@ -6,7 +6,7 @@ cfg = ConfigTraining().parse()
 
 def network_configs():
     network_config = {
-        'BASE': {
+        'AE': {
             'kernel_size':
                 [3, 4, 8],
             'stride':
@@ -18,13 +18,31 @@ def network_configs():
             "alpha_slope":
                 0.2,
             "latent_space_dimension":
-                500,
+                cfg.latent_space_dimension,
             "img_size":
                 cfg.crop_size if cfg.crop_it else cfg.img_size,
             "input_channel":
                 3
         },
-        "EXTENDED": {
+        'DAE': {
+            'kernel_size':
+                [3, 4, 8],
+            'stride':
+                [1, 2],
+            'padding':
+                [0, 1],
+            'flc':
+                [32, 64, 128],
+            "alpha_slope":
+                0.2,
+            "latent_space_dimension":
+                cfg.latent_space_dimension,
+            "img_size":
+                cfg.crop_size if cfg.crop_it else cfg.img_size,
+            "input_channel":
+                3
+        },
+        "AEE": {
             'kernel_size':
                 [3, 4, 8],
             'stride':
@@ -36,7 +54,25 @@ def network_configs():
             "alpha_slope":
                 0.2,
             "latent_space_dimension":
-                100,
+                cfg.latent_space_dimension,
+            "img_size":
+                cfg.crop_size if cfg.crop_it else cfg.img_size,
+            "input_channel":
+                3
+        },
+        "DAEE": {
+            'kernel_size':
+                [3, 4, 8],
+            'stride':
+                [1, 2],
+            'padding':
+                [0, 1],
+            'flc':
+                [32, 64, 128, 256],
+            "alpha_slope":
+                0.2,
+            "latent_space_dimension":
+                cfg.latent_space_dimension,
             "img_size":
                 cfg.crop_size if cfg.crop_it else cfg.img_size,
             "input_channel":

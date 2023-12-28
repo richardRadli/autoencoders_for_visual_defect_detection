@@ -31,7 +31,7 @@ class ConfigTraining:
 
         self.parser.add_argument('--validation_split', type=float, default=0.2)
         self.parser.add_argument("--dataset_type", type=str, default="texture_1", choices=["texture_1", "cable"])
-        self.parser.add_argument('--network_type', type=str, default='BASE', choices=['BASE', 'EXTENDED'])
+        self.parser.add_argument('--network_type', type=str, default='DAE', choices=['AE', 'AEE', 'DAE', 'DAEE'])
         self.parser.add_argument('--epochs', type=int, default=200, help='number of epochs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='batch size')
         self.parser.add_argument('--learning_rate', type=float, default=2e-4, help='learning rate')
@@ -43,6 +43,9 @@ class ConfigTraining:
         self.parser.add_argument('--img_size', type=tuple, default=(256, 256), help='image size')
         self.parser.add_argument('--crop_it', type=bool, default=True, help='')
         self.parser.add_argument('--crop_size', type=tuple, default=(128, 128), help='')
+        self.parser.add_argument('--latent_space_dimension', type=int, default=100)
+        self.parser.add_argument('--vis_during_training', type=bool, default=True)
+        self.parser.add_argument('--vis_interval', type=int, default=10)
 
     def parse(self):
         self.opt = self.parser.parse_args()
@@ -54,7 +57,7 @@ class ConfigTesting:
         self.opt = None
         self.parser = argparse.ArgumentParser()
 
-        self.parser.add_argument('--network_type', type=str, default='BASE', choices=['BASE', 'EXTENDED'])
+        self.parser.add_argument('--network_type', type=str, default='AE', choices=['AE', 'AEE', 'DAE', 'DAEE'])
         self.parser.add_argument("--dataset_type", type=str, default="texture_1", choices=["texture_1", "texture_2"])
         self.parser.add_argument("--vis_results", type=bool, default=True)
         self.parser.add_argument('--img_size', type=tuple, default=(256, 256), help='image size')

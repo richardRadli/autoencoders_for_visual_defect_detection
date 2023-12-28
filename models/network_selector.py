@@ -35,9 +35,9 @@ class ExtendedModelWrapper(BaseNetwork):
 class NetworkFactory:
     @staticmethod
     def create_network(network_type, network_cfg, device=None):
-        if network_type == "BASE":
+        if network_type == "AE" or network_type == "DAE":
             model = BaseModelWrapper(network_cfg).model
-        elif network_type == "EXTENDED":
+        elif network_type == "AEE" or network_type == "DAEE":
             model = ExtendedModelWrapper(network_cfg).model
         else:
             raise ValueError("Wrong network type")
