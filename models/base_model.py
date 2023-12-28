@@ -8,7 +8,6 @@ class AutoEncoder(nn.Module):
         super().__init__()
 
         self.cfg = cfg
-
         self.encoder = nn.Sequential(
             # Conv 1
             nn.Conv2d(in_channels=self.cfg.get("input_channel"),
@@ -115,7 +114,7 @@ class AutoEncoder(nn.Module):
                                padding=self.cfg.get("padding")[1]),
             nn.LeakyReLU(negative_slope=self.cfg.get("alpha_slope")),
 
-            # # Conv 4
+            # Conv 4
             nn.Conv2d(in_channels=self.cfg.get("flc")[1],
                       out_channels=self.cfg.get("flc")[1],
                       kernel_size=self.cfg.get("kernel_size")[0],

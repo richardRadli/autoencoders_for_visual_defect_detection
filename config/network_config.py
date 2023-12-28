@@ -18,7 +18,7 @@ def network_configs():
             "alpha_slope":
                 0.2,
             "latent_space_dimension":
-                100,
+                500,
             "img_size":
                 cfg.crop_size if cfg.crop_it else cfg.img_size,
             "input_channel":
@@ -71,12 +71,14 @@ def dataset_images_path_selector():
         "texture_1": {
             "train": DATASET_PATH.get_data_path("texture_1_train"),
             "aug": DATASET_PATH.get_data_path("texture_1_aug"),
+            "noise": DATASET_PATH.get_data_path("texture_1_noise"),
             "gt": DATASET_PATH.get_data_path("texture_1_gt_defective"),
             "test": DATASET_PATH.get_data_path("texture_1_test_defective")
         },
         "texture_2": {
             "train": DATASET_PATH.get_data_path("texture_2_train"),
             "aug": DATASET_PATH.get_data_path("texture_2_aug"),
+            "noise": DATASET_PATH.get_data_path("texture_2_noise"),
             "gt": DATASET_PATH.get_data_path("texture_2_gt_defective"),
             "test": DATASET_PATH.get_data_path("texture_2_test_defective")
         }

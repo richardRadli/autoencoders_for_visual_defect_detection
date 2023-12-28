@@ -3,7 +3,6 @@ from PIL import Image
 
 from torch.utils.data import Dataset
 from torchvision.transforms import transforms
-from torchvision.transforms.functional import crop
 
 
 class MVTecDataset(Dataset):

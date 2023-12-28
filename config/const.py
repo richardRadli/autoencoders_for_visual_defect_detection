@@ -83,6 +83,9 @@ class Datasets(_Const):
         "texture_1_aug":
             "texture_1/aug",
 
+        "texture_1_noise":
+            "texture_1/noise",
+
         "texture_1_test_defective":
             "texture_1/test/defective",
 
@@ -96,6 +99,9 @@ class Datasets(_Const):
 
         "texture_2_aug":
             "texture_2/aug",
+
+        "texture_2_noise":
+            "texture_2/noise",
 
         "texture_2_test_defective":
             "texture_2/test/defective",

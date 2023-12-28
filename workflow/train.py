@@ -14,7 +14,7 @@ from torchsummary import summary
 
 from config.config import ConfigTraining
 from config.network_config import network_configs, dataset_images_path_selector, dataset_data_path_selector
-from data_loader import MVTecDataset
+from data_loader_ae import MVTecDataset
 from models.network_selector import NetworkFactory
 from ssim_loss import SSIMLoss
 from utils.utils import create_timestamp, use_gpu_if_available, setup_logger

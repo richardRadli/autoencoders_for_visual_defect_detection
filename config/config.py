@@ -7,7 +7,7 @@ class ConfigAugmentation:
         self.parser = argparse.ArgumentParser()
 
         self.parser.add_argument('--do_augmentation', type=bool, default=True)
-        self.parser.add_argument("--dataset_type", type=str, default="texture_1", choices=["texture_1", "texture_2"])
+        self.parser.add_argument("--dataset_type", type=str, default="texture_2", choices=["texture_1", "texture_2"])
         self.parser.add_argument('--img_size', type=tuple, default=(256, 256), help='image size')
         self.parser.add_argument('--crop_size', type=tuple, default=(128, 128), help='')
         self.parser.add_argument('--augment_num', type=int, default=10000, help='number of crops')
@@ -17,6 +17,7 @@ class ConfigAugmentation:
         self.parser.add_argument('--p_crop', type=int, default=1, choices=[0, 1])
         self.parser.add_argument('--p_horizontal_flip', type=float, default=0.3)
         self.parser.add_argument('--p_vertical_flip', type=float, default=0.3)
+        self.parser.add_argument('--size_of_cover', type=int, default=20)
 
     def parse(self):
         self.opt = self.parser.parse_args()
@@ -38,7 +39,7 @@ class ConfigTraining:
         self.parser.add_argument('--loss_function_type', type=str, default='ssim', choices=['mse', 'ssim'])
         self.parser.add_argument('--decrease_learning_rate', type=bool, default=False, choices=[True, False])
         self.parser.add_argument('--step_size', type=int, default=10, help='step size')
-        self.parser.add_argument('--gamma', type=float, default=1e-5)
+        self.parser.add_argument('--gamma', type=float, default=0.5)
         self.parser.add_argument('--img_size', type=tuple, default=(256, 256), help='image size')
         self.parser.add_argument('--crop_it', type=bool, default=True, help='')
         self.parser.add_argument('--crop_size', type=tuple, default=(128, 128), help='')
