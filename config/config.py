@@ -7,7 +7,7 @@ class ConfigAugmentation:
         self.parser = argparse.ArgumentParser()
 
         self.parser.add_argument('--do_augmentation', type=bool, default=True)
-        self.parser.add_argument("--dataset_type", type=str, default="texture_2", choices=["texture_1", "texture_2"])
+        self.parser.add_argument("--dataset_type", type=str, default="texture_1", choices=["texture_1", "texture_2"])
         self.parser.add_argument('--img_size', type=tuple, default=(256, 256), help='image size')
         self.parser.add_argument('--crop_size', type=tuple, default=(128, 128), help='')
         self.parser.add_argument('--augment_num', type=int, default=10000, help='number of crops')

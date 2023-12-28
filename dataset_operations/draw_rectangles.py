@@ -19,9 +19,14 @@ def process_image(image_path, path_covered, cfg):
     color_thief = ColorThief(image_path)
     dominant_color = color_thief.get_color(quality=1)
 
-    rand = random.randint(0, (cfg.img_size[0] - cfg.size_of_cover))
+    rand_x = random.randint(0, (cfg.crop_size[0] - cfg.size_of_cover))
+    rand_y = random.randint(0, (cfg.crop_size[1] - cfg.size_of_cover))
     image_covered = cv2.rectangle(
-        img_good, (rand, rand), (rand + cfg.size_of_cover, rand + cfg.size_of_cover), dominant_color, -1
+        img=img_good,
+        pt1=(rand_x, rand_y),
+        pt2=(rand_x + cfg.size_of_cover, rand_y + cfg.size_of_cover),
+        color=dominant_color,
+        thickness=-1
     )
     file_name = os.path.join(path_covered, name + ".png")
     cv2.imwrite(file_name, image_covered)

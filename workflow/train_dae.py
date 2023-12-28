@@ -1,7 +1,7 @@
 import colorama
 import logging
-import numpy as np
 import os
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,13 +14,13 @@ from torchsummary import summary
 
 from config.config import ConfigTraining
 from config.network_config import network_configs, dataset_images_path_selector, dataset_data_path_selector
-from data_loader_ae import MVTecDataset
+from data_loader_dae import MVTecDataset
 from models.network_selector import NetworkFactory
 from ssim_loss import SSIMLoss
-from utils.utils import create_timestamp, use_gpu_if_available, setup_logger
+from utils.utils import create_timestamp, use_gpu_if_available, setup_logger, visualize_images
 
 
-class TrainAutoEncoder:
+class TrainDenoisingAutoEncoder:
     def __init__(self):
         self.logger = setup_logger()
 
@@ -31,7 +31,8 @@ class TrainAutoEncoder:
         self.train_cfg = ConfigTraining().parse()
         network_cfg = network_configs().get(self.train_cfg.network_type)
 
-        dataset = MVTecDataset(root_dir=dataset_images_path_selector().get(self.train_cfg.dataset_type).get("aug"))
+        dataset = MVTecDataset(root_dir=dataset_images_path_selector().get(self.train_cfg.dataset_type).get("aug"),
+                               noise_dir=dataset_images_path_selector().get(self.train_cfg.dataset_type).get("noise"))
 
         dataset_size = len(dataset)
         val_size = int(self.train_cfg.validation_split * dataset_size)
@@ -43,7 +44,7 @@ class TrainAutoEncoder:
 
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-        train_dataloader = DataLoader(dataset=train_dataset, batch_size=self.train_cfg.batch_size, shuffle=True)
+        train_dataloader = DataLoader(dataset=train_dataset, batch_size=self.train_cfg.batch_size, shuffle=False)
         val_dataloader = DataLoader(dataset=val_dataset, batch_size=self.train_cfg.batch_size, shuffle=False)
 
         self.train_dataloader = train_dataloader
@@ -121,9 +122,6 @@ class TrainAutoEncoder:
         os.makedirs(directory_to_create, exist_ok=True)
         return directory_to_create
 
-    # ------------------------------------------------------------------------------------------------------------------
-    # --------------------------------------------------- T R A I N ----------------------------------------------------
-    # ------------------------------------------------------------------------------------------------------------------
     def train(self):
         """
 
@@ -140,60 +138,57 @@ class TrainAutoEncoder:
             valid_losses = []
 
             self.model.train()
-            for batch_idx, images in tqdm(enumerate(self.train_dataloader),
-                                          total=len(self.train_dataloader),
-                                          desc=colorama.Fore.GREEN + "Training"):
+            for batch_idx, (images, noise_images) in tqdm(enumerate(self.train_dataloader),
+                                                          total=len(self.train_dataloader),
+                                                          desc=colorama.Fore.GREEN + "Training"):
                 images = images.to(self.device)
+                noise_images = noise_images.to(self.device)
                 self.optimizer.zero_grad()
-                outputs = self.model(images)
+                outputs = self.model(noise_images)
                 train_loss = self.criterion(outputs, images)
                 train_loss.backward()
                 self.optimizer.step()
-
                 train_losses.append(train_loss.item())
 
+                # visualize_images(images, noise_images, outputs, epoch, batch_idx)
+
             with torch.no_grad():
-                for batch_idx, images in tqdm(enumerate(self.val_dataloader),
-                                              total=len(self.val_dataloader),
-                                              desc=colorama.Fore.MAGENTA + "Validation"):
+                for batch_idx, (images, noise_images) in tqdm(enumerate(self.val_dataloader),
+                                                              total=len(self.val_dataloader),
+                                                              desc=colorama.Fore.CYAN + "Validation"):
                     images = images.to(self.device)
-                    outputs = self.model(images)
+                    noise_images = noise_images.to(self.device)
+                    outputs = self.model(noise_images)
                     valid_loss = self.criterion(outputs, images)
                     valid_losses.append(valid_loss.item())
 
-            if self.train_cfg.decrease_learning_rate:
-                self.scheduler.step()
+                if self.train_cfg.decrease_learning_rate:
+                    self.scheduler.step()
 
-            train_loss_avg = np.average(train_losses)
-            valid_loss_avg = np.average(valid_losses)
-            self.writer.add_scalars("Loss", {"Train": train_loss_avg, "Valid": valid_loss_avg}, epoch)
+                train_loss_avg = np.average(train_losses)
+                valid_loss_avg = np.average(valid_losses)
+                self.writer.add_scalars("Loss", {"Train": train_loss_avg, "Valid": valid_loss_avg}, epoch)
 
-            logging.info(f"Train Loss: {train_loss_avg:.5f} valid Loss: {valid_loss_avg:.5f}")
+                logging.info(f"Train Loss: {train_loss_avg:.5f} valid Loss: {valid_loss_avg:.5f}")
 
-            train_losses.clear()
-            valid_losses.clear()
+                train_losses.clear()
+                valid_losses.clear()
 
-            if valid_loss < best_valid_loss:
-                best_valid_loss = valid_loss
-                if best_model_path is not None:
-                    os.remove(best_model_path)
-                best_model_path = os.path.join(str(self.save_path), "epoch_" + str(epoch) + ".pt")
-                torch.save(self.model.state_dict(), best_model_path)
-                logging.info(f"New weights have been saved at epoch {epoch} with value of {valid_loss:.5f}")
-            else:
-                logging.warning(f"No new weights have been saved. Best valid loss was {best_valid_loss:.5f},\n "
-                                f"current valid loss is {valid_loss:.5f}")
+                if valid_loss < best_valid_loss:
+                    best_valid_loss = valid_loss
+                    if best_model_path is not None:
+                        os.remove(best_model_path)
+                    best_model_path = os.path.join(str(self.save_path), "epoch_" + str(epoch) + ".pt")
+                    torch.save(self.model.state_dict(), best_model_path)
+                    logging.info(f"New weights have been saved at epoch {epoch} with value of {valid_loss:.5f}")
+                else:
+                    logging.warning(f"No new weights have been saved. Best valid loss was {best_valid_loss:.5f},\n "
+                                    f"current valid loss is {valid_loss:.5f}")
 
-        self.writer.close()
-        self.writer.flush()
+            self.writer.close()
+            self.writer.flush()
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-# ------------------------------------------------------ M A I N -------------------------------------------------------
-# ----------------------------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
-    try:
-        ae = TrainAutoEncoder()
-        ae.train()
-    except KeyboardInterrupt as kie:
-        logging.error(kie)
+    ae = TrainDenoisingAutoEncoder()
+    ae.train()

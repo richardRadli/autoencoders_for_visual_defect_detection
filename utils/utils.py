@@ -1,13 +1,13 @@
 import colorlog
 import cv2
 import logging
-import math
+import matplotlib.pyplot as plt
 import numpy as np
 import os
-import random
 import pandas as pd
 import time
 import torch
+import torchvision
 
 from datetime import datetime
 from functools import wraps
@@ -212,3 +212,25 @@ def measure_execution_time(func):
         logging.info(f"Execution time of {func.__name__}: {execution_time} seconds")
         return result
     return wrapper
+
+
+def visualize_images(clean_images, noise_images, outputs, epoch, batch_idx):
+    clean_images_grid = torchvision.utils.make_grid(clean_images.cpu(), nrow=8, normalize=True)
+    noise_images_grid = torchvision.utils.make_grid(noise_images.cpu(), nrow=8, normalize=True)
+    outputs_grid = torchvision.utils.make_grid(outputs.cpu(), nrow=8, normalize=True)
+
+    plt.figure(figsize=(12, 12))
+
+    plt.subplot(3, 1, 1)
+    plt.imshow(clean_images_grid.permute(1, 2, 0))
+    plt.title(f'Clean Images - Epoch {epoch}, Batch {batch_idx}')
+
+    plt.subplot(3, 1, 2)
+    plt.imshow(noise_images_grid.permute(1, 2, 0))
+    plt.title(f'Noisy Images - Epoch {epoch}, Batch {batch_idx}')
+
+    plt.subplot(3, 1, 3)
+    plt.imshow(outputs_grid.permute(1, 2, 0))
+    plt.title(f'Reconstructed Images - Epoch {epoch}, Batch {batch_idx}')
+
+    plt.show()
