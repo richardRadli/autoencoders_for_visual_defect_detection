@@ -1,4 +1,4 @@
-from config.const import DATA_PATH, DATASET_PATH
+from config.const import DATA_PATH, DATASET_PATH, IMAGES_PATH
 from config.config import ConfigTraining
 
 cfg = ConfigTraining().parse()
@@ -89,13 +89,18 @@ def dataset_data_path_selector():
             "model_weights_dir":
                 DATA_PATH.get_data_path("texture_1_model_weights_dir"),
             "log_dir":
-                DATA_PATH.get_data_path("texture_1_log_dir")
+                DATA_PATH.get_data_path("texture_1_log_dir"),
+            "training_vis":
+                IMAGES_PATH.get_data_path("texture_1_training_vis")
+
         },
         "texture_2": {
             "model_weights_dir":
                 DATA_PATH.get_data_path("texture_2_model_weights_dir"),
             "log_dir":
-                DATA_PATH.get_data_path("texture_2_log_dir")
+                DATA_PATH.get_data_path("texture_2_log_dir"),
+            "training_vis":
+                IMAGES_PATH.get_data_path("texture_2_training_vis")
         }
     }
 

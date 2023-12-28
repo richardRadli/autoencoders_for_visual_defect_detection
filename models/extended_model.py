@@ -162,7 +162,7 @@ class ExtendedAutoEncoder(nn.Module):
                       kernel_size=self.cfg.get("kernel_size")[0],
                       stride=self.cfg.get("stride")[0],
                       padding=self.cfg.get("padding")[1]),
-            nn.LeakyReLU(negative_slope=self.cfg.get("alpha_slope")),
+            nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels=self.cfg.get("flc")[0],
                                out_channels=self.cfg.get("input_channel"),
                                kernel_size=self.cfg.get("kernel_size")[1],

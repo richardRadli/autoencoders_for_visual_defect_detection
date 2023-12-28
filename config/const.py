@@ -47,6 +47,29 @@ class _Const(object):
                 logging.info(f"Directory {dir_path} has been created")
 
 
+class Images(_Const):
+    dirs_data = {
+        "texture_1_training_vis":
+            "images/texture_1_training_vis",
+
+        "texture_2_training_vis":
+            "images/texture_2_training_vis"
+    }
+
+    # ------------------------------------------------------------------------------------------------------------------
+    # ---------------------------------------------------- I N I T -----------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
+    def __init__(self):
+        super().__init__()
+        self.create_directories(self.dirs_data, "PROJECT")
+
+    # ------------------------------------------------------------------------------------------------------------------
+    # ------------------------------------------ G E T   D A T A   P A T H ---------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
+    def get_data_path(self, key):
+        return os.path.join(self.PROJECT_ROOT, self.dirs_data.get(key, ""))
+
+
 class Data(_Const):
     dirs_data = {
         "texture_1_model_weights_dir":
@@ -125,6 +148,6 @@ class Datasets(_Const):
 
 
 CONST: _Const = _Const()
-# IMAGES_PATH: Images = Images()
+IMAGES_PATH: Images = Images()
 DATA_PATH: Data = Data()
 DATASET_PATH: Datasets = Datasets()

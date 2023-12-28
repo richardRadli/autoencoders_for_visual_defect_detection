@@ -31,7 +31,7 @@ class ConfigTraining:
 
         self.parser.add_argument('--validation_split', type=float, default=0.2)
         self.parser.add_argument("--dataset_type", type=str, default="texture_1", choices=["texture_1", "cable"])
-        self.parser.add_argument('--network_type', type=str, default='DAE', choices=['AE', 'AEE', 'DAE', 'DAEE'])
+        self.parser.add_argument('--network_type', type=str, default='AE', choices=['AE', 'AEE', 'DAE', 'DAEE'])
         self.parser.add_argument('--epochs', type=int, default=200, help='number of epochs')
         self.parser.add_argument('--batch_size', type=int, default=32, help='batch size')
         self.parser.add_argument('--learning_rate', type=float, default=2e-4, help='learning rate')

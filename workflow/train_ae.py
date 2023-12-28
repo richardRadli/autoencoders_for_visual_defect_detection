@@ -28,9 +28,9 @@ class TrainAutoEncoder:
             raise ValueError(f"wrong network type: {self.train_cfg}")
 
         # Config initialize
-        timestamp = create_timestamp()
+        self.timestamp = create_timestamp()
         setup_logger()
-        network_type = self.train_cfg.network_type
+        self.network_type = self.train_cfg.network_type
         colorama.init()
         network_cfg = network_configs().get(self.train_cfg.network_type)
 
@@ -80,8 +80,8 @@ class TrainAutoEncoder:
         tensorboard_log_dir = (
             create_save_dirs(
                 directory_path=dataset_data_path_selector().get(self.train_cfg.dataset_type).get("log_dir"),
-                network_type=network_type,
-                timestamp=timestamp
+                network_type=self.network_type,
+                timestamp=self.timestamp
             )
         )
 
@@ -90,8 +90,8 @@ class TrainAutoEncoder:
         self.save_path = (
             create_save_dirs(
                 directory_path=dataset_data_path_selector().get(self.train_cfg.dataset_type).get("model_weights_dir"),
-                network_type=network_type,
-                timestamp=timestamp
+                network_type=self.network_type,
+                timestamp=self.timestamp
             )
         )
 
@@ -125,11 +125,17 @@ class TrainAutoEncoder:
                 self.optimizer.step()
                 train_losses.append(train_loss.item())
 
-                if self.train_cfg.vis_during_training and (epoch % self.train_cfg.vis_interval == 0):
+                if self.train_cfg.vis_during_training and (epoch % self.train_cfg.vis_interval == 0) and batch_idx == 0:
+                    vis_dir = create_save_dirs(
+                        directory_path=dataset_data_path_selector().get(self.train_cfg.dataset_type).get("training_vis"),
+                        network_type=self.network_type,
+                        timestamp=self.timestamp
+                    )
                     visualize_images(clean_images=images,
                                      outputs=outputs,
                                      epoch=epoch,
-                                     batch_idx=batch_idx)
+                                     batch_idx=batch_idx,
+                                     dir_path=str(vis_dir))
 
             with torch.no_grad():
                 for batch_idx, images in tqdm(enumerate(self.val_dataloader),

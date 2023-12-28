@@ -217,7 +217,9 @@ def measure_execution_time(func):
     return wrapper
 
 
-def visualize_images(clean_images, outputs, epoch, batch_idx, noise_images=None):
+def visualize_images(clean_images, outputs, epoch, batch_idx, dir_path, noise_images=None):
+    filename = os.path.join(dir_path, f"{epoch}_{batch_idx}.png")
+
     clean_images_grid = torchvision.utils.make_grid(clean_images.cpu(), nrow=8, normalize=True)
     noise_images_grid = None
     if noise_images is not None:
@@ -241,7 +243,8 @@ def visualize_images(clean_images, outputs, epoch, batch_idx, noise_images=None)
     plt.imshow(outputs_grid.permute(1, 2, 0))
     plt.title(f'Reconstructed Images - Epoch {epoch}, Batch {batch_idx}')
 
-    plt.show()
+    plt.savefig(filename)
+    plt.close()
 
 
 # ------------------------------------------------------------------------------------------------------------------
