@@ -104,7 +104,8 @@ class TestAutoEncoder:
         depr_mask[5:self.mask_size - 5, 5:self.mask_size - 5] = 1
         return depr_mask
 
-    def plot_results(self, test_img, rec_img, mask, vis_img):
+    @staticmethod
+    def plot_results(test_img, rec_img, mask, vis_img):
         """
 
         :param test_img:
@@ -114,7 +115,6 @@ class TestAutoEncoder:
         :return:
         """
 
-        filename = os.path.join(self.save_roc_plot_dir, "roc.png")
         test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
         vis_img = cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB)
 
@@ -135,8 +135,7 @@ class TestAutoEncoder:
         plt.title('vis_img')
 
         plt.tight_layout()
-        plt.savefig(filename)
-        plt.close()
+        plt.show()
 
     @staticmethod
     def threshold_calculator(start: float, end: float, number_of_steps: float):
@@ -151,14 +150,15 @@ class TestAutoEncoder:
         step = end / number_of_steps
         return np.arange(start=start, stop=end, step=step)
 
-    @staticmethod
-    def plot_average_roc(all_fpr, all_tpr):
+    def plot_average_roc(self, all_fpr, all_tpr):
         """
 
         :param all_fpr:
         :param all_tpr:
         :return:
         """
+
+        filename = os.path.join(self.save_roc_plot_dir, "roc.png")
 
         tpr_array = np.array(all_tpr)
         fpr_array = np.array(all_fpr)
@@ -169,14 +169,15 @@ class TestAutoEncoder:
 
         auc_roc = np.trapz(sorted_tpr, sorted_fpr)
 
-        plt.plot(sorted_fpr, sorted_tpr, label=f'ROC Curve (AUC = {auc_roc:.2f})')
+        plt.plot(sorted_fpr, sorted_tpr, label=f'ROC Curve (AUC = {auc_roc:.4f})')
         plt.scatter(sorted_fpr, sorted_tpr, c='blue', marker='.')
         plt.grid(True)
         plt.xlabel('False Positive Rate (FPR)')
         plt.ylabel('True Positive Rate (TPR)')
         plt.title('Receiver Operating Characteristic (ROC) Curve')
         plt.legend()
-        plt.show()
+        plt.savefig(filename)
+        plt.close()
 
     def get_results(self, ssim_threshold):
         """

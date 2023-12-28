@@ -122,7 +122,7 @@ class TrainDenoisingAutoEncoder:
                 self.optimizer.step()
                 train_losses.append(train_loss.item())
 
-                if self.train_cfg.vis_during_training and (epoch % self.train_cfg.vis_interval):
+                if self.train_cfg.vis_during_training and (epoch % self.train_cfg.vis_interval == 0) and batch_idx == 0:
                     vis_dir = create_save_dirs(
                         directory_path=dataset_data_path_selector().get(self.train_cfg.dataset_type).get(
                             "training_vis"
@@ -130,9 +130,9 @@ class TrainDenoisingAutoEncoder:
                         network_type=self.network_type,
                         timestamp=self.timestamp
                     )
-
                     visualize_images(clean_images=images,
                                      outputs=outputs,
+                                     noise_images=noise_images,
                                      epoch=epoch,
                                      batch_idx=batch_idx,
                                      dir_path=str(vis_dir))
@@ -175,5 +175,8 @@ class TrainDenoisingAutoEncoder:
 
 
 if __name__ == "__main__":
-    ae = TrainDenoisingAutoEncoder()
-    ae.train()
+    try:
+        ae = TrainDenoisingAutoEncoder()
+        ae.train()
+    except KeyboardInterrupt as kie:
+        logging.error(kie)
