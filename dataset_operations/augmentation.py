@@ -1,14 +1,25 @@
 import cv2
+import logging
 import math
 import numpy as np
 import os
 import random
 
+from typing import List, Tuple
+
 from config.config import ConfigAugmentation
 from config.network_config import dataset_images_path_selector
 
 
-def generate_image_list(train_data_dir, augment_num):
+def generate_image_list(train_data_dir: str, augment_num: int) -> List[Tuple[str, int]]:
+    """
+    Generate a list of image filenames with corresponding augmentation counts.
+
+    :param train_data_dir: The directory containing the training images.
+    :param augment_num: The total number of augmentations to be performed.
+    :return: A list of tuples, each containing a filename and its corresponding augmentation count.
+    """
+
     filenames = os.listdir(train_data_dir)
     num_imgs = len(filenames)
     num_ave_aug = int(math.floor(augment_num/num_imgs))
@@ -24,7 +35,15 @@ def generate_image_list(train_data_dir, augment_num):
     return img_list
 
 
-def random_crop(image, new_size):
+def random_crop(image: np.ndarray, new_size: Tuple[int, int]) -> np.ndarray:
+    """
+    Perform a random crop on the input image.
+
+    :param image: The input image as a NumPy array.
+    :param new_size: A tuple representing the new size (height, width) of the cropped image.
+    :return: The cropped image.
+    """
+
     h, w = image.shape[:2]
     y = np.random.randint(0, h - new_size[0])
     x = np.random.randint(0, w - new_size[1])
@@ -32,7 +51,16 @@ def random_crop(image, new_size):
     return image
 
 
-def rotate_image(img, angle, crop):
+def rotate_image(img: np.ndarray, angle: float, crop: bool) -> np.ndarray:
+    """
+    Rotate the input image by the specified angle.
+
+    :param img: The input image as a NumPy array.
+    :param angle: The angle (in degrees) by which to rotate the image.
+    :param crop: A boolean indicating whether to crop the image after rotation.
+    :return: The rotated image.
+    """
+
     h, w = img.shape[:2]
     angle %= 360
     m_rotate = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1)
@@ -56,13 +84,31 @@ def rotate_image(img, angle, crop):
     return img_rotated
 
 
-def random_rotate(img, angle_vari, p_crop):
+def random_rotate(img: np.ndarray, angle_vari: float, p_crop: float) -> np.ndarray:
+    """
+    Rotate the input image by a random angle within the specified range.
+
+    :param img: The input image as a NumPy array.
+    :param angle_vari: The range of variation for the random rotation angle.
+    :param p_crop: The probability of cropping the image after rotation.
+    :return: The randomly rotated image.
+    """
+
     angle = np.random.uniform(-angle_vari, angle_vari)
     crop = False if np.random.random() > p_crop else True
     return rotate_image(img, angle, crop)
 
 
-def augment_images(filelist, aug_out_dir, cfg):
+def augment_images(filelist: List[Tuple[str, int]], aug_out_dir: str, cfg) -> None:
+    """
+    Augment a list of images and save the augmented images to the specified directory.
+
+    :param filelist: A list of tuples, each containing a filepath and its corresponding augmentation count.
+    :param aug_out_dir: The directory to save the augmented images.
+    :param cfg: An object containing configuration parameters for image augmentation.
+    :return: None
+    """
+
     for filepath, n in filelist:
         img = cv2.imread(filepath)
         if img.shape[:2] != cfg.img_size:
@@ -72,7 +118,7 @@ def augment_images(filelist, aug_out_dir, cfg):
         imgname = filename[:dot_pos]
         ext = filename[dot_pos:]
 
-        print('Augmenting {} ...'.format(filename))
+        logging.info('Augmenting {} ...'.format(filename))
         for i in range(n):
             img_varied = img.copy()
             varied_imgname = '{}_{:0>3d}_'.format(imgname, i)
@@ -104,18 +150,29 @@ def augment_images(filelist, aug_out_dir, cfg):
             cv2.imwrite(output_filepath, img_varied)
 
 
-def main():
-    aug_cfg = ConfigAugmentation().parse()
+def main() -> None:
+    """
+    Main function for data augmentation.
 
-    if aug_cfg.do_augmentation:
-        img_list = generate_image_list(
-            train_data_dir=dataset_images_path_selector().get(aug_cfg.dataset_type).get("train"),
-            augment_num=aug_cfg.augment_num
-        )
+    :return: None
+    """
 
-        augment_images(filelist=img_list,
-                       aug_out_dir=dataset_images_path_selector().get(aug_cfg.dataset_type).get("aug"),
-                       cfg=aug_cfg)
+    try:
+        aug_cfg = ConfigAugmentation().parse()
+
+        if aug_cfg.do_augmentation:
+            train_data_dir = dataset_images_path_selector().get(aug_cfg.dataset_type, {}).get("train")
+            aug_out_dir = dataset_images_path_selector().get(aug_cfg.dataset_type, {}).get("aug")
+
+            if not train_data_dir or not aug_out_dir:
+                print("Error: Missing or invalid paths for training data or augmentation output.")
+                return
+
+            img_list = generate_image_list(train_data_dir=train_data_dir, augment_num=aug_cfg.augment_num)
+            augment_images(filelist=img_list, aug_out_dir=aug_out_dir, cfg=aug_cfg)
+
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
 
 
 if __name__ == "__main__":

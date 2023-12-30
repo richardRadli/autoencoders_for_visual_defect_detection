@@ -58,11 +58,12 @@ class TestAutoEncoder:
         self.model.to(self.device)
         self.model.eval()
 
-    def get_residual_map(self, test_img_path):
+    def get_residual_map(self, test_img_path: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
+        Get the residual map of a test image after reconstruction.
 
-        :param test_img_path:
-        :return:
+        :param test_img_path: Path to the test image.
+        :return: Tuple containing the original image, reconstructed image, and SSIM residual map.
         """
 
         test_img = cv2.imread(test_img_path)
@@ -94,10 +95,11 @@ class TestAutoEncoder:
 
         return test_img, rec_img, ssim_residual_map
 
-    def get_depressing_mask(self):
+    def get_mask(self) -> np.ndarray:
         """
+        Generate a depressing mask.
 
-        :return:
+        :return: Depressing mask as a NumPy array.
         """
 
         depr_mask = np.ones((self.mask_size, self.mask_size)) * 0.2
@@ -138,24 +140,26 @@ class TestAutoEncoder:
         plt.show()
 
     @staticmethod
-    def threshold_calculator(start: float, end: float, number_of_steps: float):
+    def threshold_calculator(start: float, end: float, number_of_steps: int) -> np.ndarray:
         """
+        Generate an array of thresholds within a specified range.
 
-        :param start:
-        :param end:
-        :param number_of_steps:
-        :return:
+        :param start: Starting value of the threshold range.
+        :param end: Ending value of the threshold range.
+        :param number_of_steps: Number of steps to divide the range into.
+        :return: NumPy array containing the generated thresholds.
         """
 
         step = end / number_of_steps
         return np.arange(start=start, stop=end, step=step)
 
-    def plot_average_roc(self, all_fpr, all_tpr):
+    def plot_average_roc(self, all_fpr: list, all_tpr: list) -> None:
         """
+        Plot the average ROC curve.
 
-        :param all_fpr:
-        :param all_tpr:
-        :return:
+        :param all_fpr: List of false positive rates.
+        :param all_tpr: List of true positive rates.
+        :return: None
         """
 
         filename = os.path.join(self.save_roc_plot_dir, "roc.png")
@@ -179,11 +183,12 @@ class TestAutoEncoder:
         plt.savefig(filename)
         plt.close()
 
-    def get_results(self, ssim_threshold):
+    def get_results(self, ssim_threshold: float) -> tuple[float, float]:
         """
+        Calculate average False Positive Rate (FPR) and True Positive Rate (TPR) for a given SSIM threshold.
 
-        :param ssim_threshold:
-        :return:
+        :param ssim_threshold: SSIM threshold for generating binary masks.
+        :return: Tuple containing average FPR and TPR.
         """
 
         all_fpr = []
@@ -191,7 +196,7 @@ class TestAutoEncoder:
 
         for idx, (test_img, gt_img) in enumerate(zip(self.test_images, self.gt_images)):
             test_img, rec_img, ssim_residual_map = self.get_residual_map(test_img)
-            depr_mask = self.get_depressing_mask()
+            depr_mask = self.get_mask()
             ssim_residual_map *= depr_mask
 
             mask = np.zeros((self.mask_size, self.mask_size))
@@ -234,17 +239,26 @@ class TestAutoEncoder:
 
         return avg_of_list(all_fpr), avg_of_list(all_tpr)
 
+    def main(self) -> None:
+        """
+        Main method for executing the ROC analysis.
+
+        :return: None
+        """
+
+        threshold_range = self.threshold_calculator(start=0.01, end=1.01, number_of_steps=101)
+        fpr_list, tpr_list = [], []
+
+        for ssim_tresh in tqdm(threshold_range):
+            fpr, tpr = self.get_results(ssim_tresh)
+            fpr_list.append(fpr)
+            tpr_list.append(tpr)
+        self.plot_average_roc(fpr_list, tpr_list)
+
 
 if __name__ == '__main__':
     try:
         autoencoder = TestAutoEncoder()
-        threshold_range = autoencoder.threshold_calculator(start=0.01, end=1.01, number_of_steps=101)
-
-        fpr_list, tpr_list = [], []
-        for ssim_tresh in tqdm(threshold_range):
-            fpr, tpr = autoencoder.get_results(ssim_tresh)
-            fpr_list.append(fpr)
-            tpr_list.append(tpr)
-        autoencoder.plot_average_roc(fpr_list, tpr_list)
+        autoencoder.main()
     except KeyboardInterrupt as kie:
         logging.error(kie)

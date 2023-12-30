@@ -94,10 +94,11 @@ class TrainDenoisingAutoEncoder:
             )
         )
 
-    def train(self):
+    def train(self) -> None:
         """
+        Train the model.
 
-        :return:
+        :return: None
         """
 
         best_valid_loss = float('inf')

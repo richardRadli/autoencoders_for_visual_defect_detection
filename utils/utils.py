@@ -1,5 +1,6 @@
 import colorlog
 import cv2
+import gc
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,6 +13,7 @@ import torchvision
 
 from datetime import datetime
 from functools import wraps
+from typing import Optional
 
 from utils.ssim_loss import SSIMLoss
 
@@ -100,7 +102,16 @@ def create_timestamp() -> str:
     return datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
 
-def get_patch(image, new_size, stride):
+def get_patch(image: np.ndarray, new_size: int, stride: int) -> np.ndarray:
+    """
+    Extract square patches from an image with a specified size and stride.
+
+    :param image: The input image as a NumPy array.
+    :param new_size: The size of the patches to extract.
+    :param stride: The stride between consecutive patches.
+    :return: An array containing extracted patches.
+    """
+
     h, w = image.shape[:2]
     i, j = new_size, new_size
     patch = []
@@ -113,7 +124,17 @@ def get_patch(image, new_size, stride):
     return np.array(patch)
 
 
-def patch2img(patches, im_size, patch_size, stride):
+def patch2img(patches, im_size: int, patch_size: int, stride: int) -> np.ndarray:
+    """
+    Reconstruct an image from patches with a specified size and stride.
+
+    :param patches: Patches to reconstruct, assumed to be a NumPy array or PyTorch tensor.
+    :param im_size: Size of the reconstructed image.
+    :param patch_size: Size of the square patches used during extraction.
+    :param stride: The stride between consecutive patches during extraction.
+    :return: Reconstructed image.
+    """
+
     patches = patches.detach().cpu().numpy()
     patches = np.transpose(patches, (0, 2, 3, 1))
     img = np.zeros((im_size, im_size, patches.shape[3] + 1))
@@ -132,7 +153,14 @@ def patch2img(patches, im_size, patch_size, stride):
     return img
 
 
-def fill_hole(mask):
+def fill_hole(mask: np.ndarray):
+    """
+    Fill holes in a binary mask by drawing contours and summing them.
+
+    :param mask: Input binary mask.
+    :return: Binary mask with filled holes.
+    """
+
     contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     len_contour = len(contours)
     contour_list = []
@@ -145,7 +173,16 @@ def fill_hole(mask):
     return out
 
 
-def bg_mask(img, value, mode):
+def bg_mask(img: np.ndarray, value: int, mode: int) -> np.ndarray:
+    """
+    Create a binary mask based on image intensity.
+
+    :param img: Input image as a NumPy array.
+    :param value: Intensity threshold value.
+    :param mode: Thresholding mode (cv2.THRESH_BINARY or cv2.THRESH_BINARY_INV).
+    :return: Binary mask as a NumPy array.
+    """
+
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     _, thresh = cv2.threshold(img, value, 255, mode)
     thresh = fill_hole(thresh)
@@ -156,7 +193,16 @@ def bg_mask(img, value, mode):
     return mask_
 
 
-def set_img_color(img, predict_mask, weight_foreground):
+def set_img_color(img: np.ndarray, predict_mask: np.ndarray, weight_foreground: float) -> np.ndarray:
+    """
+    Modify image colors based on a predicted mask.
+
+    :param img: Input image as a NumPy array.
+    :param predict_mask: Predicted mask as a binary NumPy array.
+    :param weight_foreground: Weight for blending the modified image with the original.
+    :return: Modified image as a NumPy array.
+    """
+
     origin = img
     img[np.where(predict_mask == 255)] = (0, 0, 255)
     cv2.addWeighted(img, weight_foreground, origin, (1 - weight_foreground), 0, img)
@@ -217,7 +263,21 @@ def measure_execution_time(func):
     return wrapper
 
 
-def visualize_images(clean_images, outputs, epoch, batch_idx, dir_path, noise_images=None):
+def visualize_images(
+    clean_images: torch.Tensor, outputs: torch.Tensor, epoch: int, batch_idx: int, dir_path: str,
+        noise_images: Optional[torch.Tensor] = None) -> None:
+    """
+    Visualize and save images for inspection.
+
+    :param clean_images: Tensor containing clean images.
+    :param outputs: Tensor containing reconstructed images.
+    :param epoch: Current epoch number.
+    :param batch_idx: Current batch index.
+    :param dir_path: Directory path to save the visualization.
+    :param noise_images: Optional tensor containing noisy images.
+    :return: None
+    """
+
     filename = os.path.join(dir_path, f"{epoch}_{batch_idx}.png")
 
     clean_images_grid = torchvision.utils.make_grid(clean_images.cpu(), nrow=8, normalize=True)
@@ -245,16 +305,18 @@ def visualize_images(clean_images, outputs, epoch, batch_idx, dir_path, noise_im
 
     plt.savefig(filename)
     plt.close()
+    gc.collect()
 
 
 # ------------------------------------------------------------------------------------------------------------------
 # --------------------------------------- G E T   L O S S   F U N C T I O N ----------------------------------------
 # ------------------------------------------------------------------------------------------------------------------
-def get_loss_function(loss_function_type):
+def get_loss_function(loss_function_type: str):
     """
+    Get the loss function based on the provided loss function type.
 
-    :param loss_function_type:
-    :return:
+    :param loss_function_type: String specifying the type of loss function ("mse" or "ssim").
+    :return: Loss function instance.
     """
 
     loss_functions = {
@@ -271,13 +333,14 @@ def get_loss_function(loss_function_type):
 # ------------------------------------------------------------------------------------------------------------------
 # ---------------------------------------- C R E A T E   S A V E   D I R S -----------------------------------------
 # ------------------------------------------------------------------------------------------------------------------
-def create_save_dirs(directory_path, network_type, timestamp):
+def create_save_dirs(directory_path: str, network_type: str, timestamp: str) -> str:
     """
+    Create and return a directory path based on input parameters.
 
-    :param directory_path:
-    :param network_type:
-    :param timestamp:
-    :return:
+    :param directory_path: Base directory path where the new directory will be created.
+    :param network_type: String specifying the type of network.
+    :param timestamp: String timestamp for uniqueness.
+    :return: Created directory path.
     """
 
     directory_to_create = (
@@ -289,9 +352,10 @@ def create_save_dirs(directory_path, network_type, timestamp):
 
 def avg_of_list(my_list):
     """
+    Calculate and return the average value of the elements in the input list.
 
-    :param my_list:
-    :return:
+    :param my_list: List of numerical values.
+    :return: Average value of the elements in the list.
     """
 
     return sum(my_list) / len(my_list)
