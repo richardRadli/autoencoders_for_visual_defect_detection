@@ -16,8 +16,7 @@ class MVTecDataset(Dataset):
         assert len(self.image_files) == len(self.noise_files), "Number of image files and noise files must be the same"
 
         self.transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            transforms.ToTensor()
         ])
 
     def __len__(self):

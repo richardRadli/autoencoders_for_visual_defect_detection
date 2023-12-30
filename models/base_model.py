@@ -153,7 +153,16 @@ class AutoEncoder(nn.Module):
             nn.Sigmoid()
         )
 
+        self.apply(self._initialize_weights)
+
     def forward(self, x: torch.Tensor):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
+
+    @staticmethod
+    def _initialize_weights(layer):
+        if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.ConvTranspose2d):
+            nn.init.xavier_uniform_(layer.weight)
+            if layer.bias is not None:
+                nn.init.zeros_(layer.bias)

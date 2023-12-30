@@ -10,7 +10,7 @@ class MVTecDataset(Dataset):
         self.root_dir = root_dir
         self.image_files = sorted([os.path.join(root_dir, filename) for filename in os.listdir(root_dir)])
         self.transform = transforms.Compose([
-            transforms.ToTensor(),
+            transforms.ToTensor()
         ])
 
     def __len__(self):

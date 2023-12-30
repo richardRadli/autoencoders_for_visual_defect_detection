@@ -121,6 +121,7 @@ class TrainAutoEncoder:
                 outputs = self.model(images)
                 train_loss = self.criterion(outputs, images)
                 train_loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                 self.optimizer.step()
                 train_losses.append(train_loss.item())
 
