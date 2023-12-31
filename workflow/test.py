@@ -1,3 +1,5 @@
+import gc
+
 import cv2
 import logging
 import matplotlib.pyplot as plt
@@ -39,6 +41,11 @@ class TestAutoEncoder:
         self.save_roc_plot_dir = create_save_dirs(directory_path=roc_dir,
                                                   network_type=self.test_cfg.network_type,
                                                   timestamp=timestamp)
+
+        rec_dir = dataset_data_path_selector().get(self.test_cfg.dataset_type).get("reconstruction_images")
+        self.save_reconstruction_plot_dir = create_save_dirs(directory_path=rec_dir,
+                                                             network_type=self.test_cfg.network_type,
+                                                             timestamp=timestamp)
 
         self.device = use_gpu_if_available()
         self.model = NetworkFactory.create_network(network_type=self.test_cfg.network_type,
@@ -107,15 +114,31 @@ class TestAutoEncoder:
         return depr_mask
 
     @staticmethod
-    def plot_results(test_img, rec_img, mask, vis_img):
+    def threshold_calculator(start: float, end: float, number_of_steps: int) -> np.ndarray:
+        """
+        Generate an array of thresholds within a specified range.
+
+        :param start: Starting value of the threshold range.
+        :param end: Ending value of the threshold range.
+        :param number_of_steps: Number of steps to divide the range into.
+        :return: NumPy array containing the generated thresholds.
+        """
+
+        step = end / number_of_steps
+        return np.arange(start=start, stop=end, step=step)
+
+    def plot_rec_images(self, test_img, rec_img, mask, vis_img, idx):
         """
 
         :param test_img:
         :param rec_img:
         :param mask:
         :param vis_img:
+        :param idx:
         :return:
         """
+
+        filename = os.path.join(self.save_reconstruction_plot_dir, f"{idx}_reconstruction.png")
 
         test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
         vis_img = cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB)
@@ -136,22 +159,10 @@ class TestAutoEncoder:
         plt.imshow(vis_img, cmap='gray')
         plt.title('vis_img')
 
-        plt.tight_layout()
-        plt.show()
+        plt.savefig(filename)
+        plt.close()
 
-    @staticmethod
-    def threshold_calculator(start: float, end: float, number_of_steps: int) -> np.ndarray:
-        """
-        Generate an array of thresholds within a specified range.
-
-        :param start: Starting value of the threshold range.
-        :param end: Ending value of the threshold range.
-        :param number_of_steps: Number of steps to divide the range into.
-        :return: NumPy array containing the generated thresholds.
-        """
-
-        step = end / number_of_steps
-        return np.arange(start=start, stop=end, step=step)
+        gc.collect()
 
     def plot_average_roc(self, all_fpr: list, all_tpr: list) -> None:
         """
@@ -172,6 +183,8 @@ class TestAutoEncoder:
         sorted_tpr = tpr_array[sorted_indices]
 
         auc_roc = np.trapz(sorted_tpr, sorted_fpr)
+
+        logging.info(f"{auc_roc:.4f}")
 
         plt.plot(sorted_fpr, sorted_tpr, label=f'ROC Curve (AUC = {auc_roc:.4f})')
         plt.scatter(sorted_fpr, sorted_tpr, c='blue', marker='.')
@@ -235,7 +248,7 @@ class TestAutoEncoder:
 
             if self.test_cfg.vis_results:
                 vis_img = set_img_color(test_img.copy(), mask_copy, weight_foreground=0.3)
-                self.plot_results(test_img, rec_img, mask_copy, vis_img)
+                self.plot_rec_images(test_img, rec_img, mask_copy, vis_img, idx)
 
         return avg_of_list(all_fpr), avg_of_list(all_tpr)
 

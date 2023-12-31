@@ -93,7 +93,9 @@ def dataset_data_path_selector():
             "training_vis":
                 IMAGES_PATH.get_data_path("texture_1_training_vis"),
             "roc_plot":
-                IMAGES_PATH.get_data_path("texture_1_roc_plot")
+                IMAGES_PATH.get_data_path("texture_1_roc_plot"),
+            "reconstruction_images":
+                IMAGES_PATH.get_data_path("texture_1_reconstruction_vis")
 
         },
         "texture_2": {
@@ -104,7 +106,9 @@ def dataset_data_path_selector():
             "training_vis":
                 IMAGES_PATH.get_data_path("texture_2_training_vis"),
             "roc_plot":
-                IMAGES_PATH.get_data_path("texture_2_roc_plot")
+                IMAGES_PATH.get_data_path("texture_2_roc_plot"),
+            "reconstruction_images":
+                IMAGES_PATH.get_data_path("texture_2_reconstruction_vis")
         }
     }
 

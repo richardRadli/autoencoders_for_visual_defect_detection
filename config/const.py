@@ -50,14 +50,18 @@ class _Const(object):
 class Images(_Const):
     dirs_data = {
         "texture_1_training_vis":
-            "images/texture_1_training_vis",
+            "images/texture_1/training_vis",
         "texture_1_roc_plot":
-            "images/texture_1_roc_plot",
+            "images/texture_1/roc_plot",
+        "texture_1_reconstruction_vis":
+            "images/texture_1/reconstruction_vis",
 
         "texture_2_training_vis":
-            "images/texture_2_training_vis",
+            "images/texture_2/training_vis",
         "texture_2_roc_plot":
-            "images/texture_2_roc_plot"
+            "images/texture_2/roc_plot",
+        "texture_2_reconstruction_vis":
+            "images/texture_2/reconstruction_vis"
     }
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -77,14 +81,14 @@ class Images(_Const):
 class Data(_Const):
     dirs_data = {
         "texture_1_model_weights_dir":
-            "weights/texture_1_model_weights",
+            "data/texture_1/model_weights",
         "texture_1_log_dir":
-            "logs/texture_1_model_logs",
+            "data/texture_1/model_logs",
 
         "texture_2_model_weights_dir":
-            "weights/texture_2_model_weights",
+            "data/texture_2/model_weights",
         "texture_2_log_dir":
-            "logs/texture_2_model_logs"
+            "data/texture_2/model_logs"
     }
 
     # ------------------------------------------------------------------------------------------------------------------
