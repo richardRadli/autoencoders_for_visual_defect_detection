@@ -47,7 +47,7 @@ root_mapping = {
 }
 ```
 
--  Update the designated username ('ricsi') to reflect the username associated with your logged-in operating system.
+- Update the designated username ('ricsi') to reflect the username associated with your logged-in operating system.
 - Utilize PROJECT_ROOT as the central repository for storing essential data such as weights and images, including ROC plots, within your project.
 - Employ DATASET_ROOT as the designated directory for managing datasets integral to the functioning of the project.
 - const.py will create all the necessary folders.
@@ -56,7 +56,16 @@ root_mapping = {
 ## Usage
 In the config.py file, key parameters and settings crucial for the training, testing, and data augmentation processes are centrally stored. These configurations provide a streamlined and organized approach to manage various aspects of the project, ensuring adaptability and ease of customization.
 
-If all is set, just run train.py or test.py
+If you wish to train the network with cropped images, the following steps must be executed:
+
+-  In _config.py_, in the _ConfigAugmentation()_ class, set _do_augmentation_ to True, select the desired _dataset_type_, and set up the augmentation parameters.
+-  Run _augmentation.py_.
+-  If you wish to train the denoising autoencoder, run _draw_rectangles.py_ as well. This script will create images with rectangles.
+-  Back to _const.py_, in the _ConfigTraining()_ class, set up the desired parameters. Make sure that _crop_it_ is set to True.
+-  Run _train_ae.py_ or _train_dae.py_. 
+-  After training, set up the parameters in _ConfigTesting()_, and run _test.py_
+
+On the other hand, to execute the workflow without cropped images, skip _do_augmentation_ and set _crop_it_ to False.
 
 ## More info
 Paper is accessable here:
