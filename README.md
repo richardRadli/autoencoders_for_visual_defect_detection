@@ -67,6 +67,19 @@ If you wish to train the network with cropped images, the following steps must b
 
 On the other hand, to execute the workflow without cropped images, skip _do_augmentation_ and set _crop_it_ to False.
 
+## Screenshots
+
+Below are some pictures of how the program works.
+
+ROC curve:
+![ROC_curve](poc_images/roc.png)
+
+Training visualisation:
+![training_visualisation](poc_images/190_0.png)
+
+Reconstruction visualisation:
+![reconstruction_vis](poc_images/0_reconstruction.png)
+
 ## More info
 Paper is accessable here:
 http://wscg.zcu.cz/WSCG2021/FULL/I79.pdf
