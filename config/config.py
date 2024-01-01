@@ -63,7 +63,7 @@ class ConfigTesting:
 
         self.parser.add_argument('--network_type', type=str, default='AE', choices=['AE', 'AEE', 'DAE', 'DAEE'])
         self.parser.add_argument("--dataset_type", type=str, default="texture_1", choices=["texture_1", "texture_2"])
-        self.parser.add_argument("--vis_results", type=bool, default=False)
+        self.parser.add_argument("--vis_results", type=bool, default=True)
         self.parser.add_argument('--img_size', type=tuple, default=(256, 256), help='image size')
         self.parser.add_argument('--crop_size', type=tuple, default=(128, 128), help='size of the crops from the image')
         self.parser.add_argument('--stride', type=int, default=32, help='size of stride')
