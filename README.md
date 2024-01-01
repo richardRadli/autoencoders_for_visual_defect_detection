@@ -72,13 +72,14 @@ On the other hand, to execute the workflow without cropped images, skip _do_augm
 Below are some pictures of how the program works.
 
 ROC curve:
-![ROC_curve](poc_images/roc.png)
+![ROC_curve](poc_images/roc.png){: width="400"}
 
-Training visualisation:
-![training_visualisation](poc_images/190_0.png)
+Training visualization:
+![training_visualization](poc_images/190_0.png){: width="400"}
 
-Reconstruction visualisation:
-![reconstruction_vis](poc_images/0_reconstruction.png)
+Reconstruction visualization:
+![reconstruction_visualization](poc_images/0_reconstruction.png){: width="400"}
+
 
 ## More info
 Paper is accessable here:
