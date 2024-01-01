@@ -1,6 +1,4 @@
-
 # About the Application of Autoencoders for Visual Defect Detection
-
 
 Visual defect detection is a key technology in modern industrial manufacturing systems. There are many possible
 appearances of product defects, including distortions in color, shape, contamination, missing or superfluous parts.
@@ -11,11 +9,13 @@ of defects for training. Unfortunately, the manual and/or trial-and-error design
 good performance, since there are many unknown parameters of AEs which can greatly influence the detection
 abilities.
 
+
 ## Datasets
 MVTec Texture 1 and 2 datasets can be downloaded from the following link: 
 https://www.mydrive.ch/shares/46066/8338a11f32bb1b7b215c5381abe54ebf/download/420939225-1629955758/textures.zip
 
 Our dataset can be downloaded from here:
+
 
 ## Requirement
 Make sure you have the following dependencies installed:
@@ -53,6 +53,7 @@ root_mapping = {
 - const.py will create all the necessary folders.
 - Download the datasets and place them into the appropropriate folders.
 
+
 ## Usage
 In the config.py file, key parameters and settings crucial for the training, testing, and data augmentation processes are centrally stored. These configurations provide a streamlined and organized approach to manage various aspects of the project, ensuring adaptability and ease of customization.
 
@@ -66,6 +67,7 @@ If you wish to train the network with cropped images, the following steps must b
 -  After training, set up the parameters in _ConfigTesting()_, and run _test.py_
 
 On the other hand, to execute the workflow without cropped images, skip _do_augmentation_ and set _crop_it_ to False.
+
 
 ## Screenshots
 
@@ -88,5 +90,14 @@ Below are some pictures of how the program works.
 
 
 ## More info
-Paper is accessable here:
+Our paper is accessable here:
 http://wscg.zcu.cz/WSCG2021/FULL/I79.pdf
+
+
+## References
+
+Our article is mainly inspired by the following article:
+@inproceedings{inproceedings, author = {Bergmann, Paul and Löwe, Sindy and Fauser, Michael and Sattlegger, David and Steger, Carsten}, year = {2019}, month = {01}, pages = {372-380}, title = {Improving Unsupervised Defect Segmentation by Applying Structural Similarity to Autoencoders}, doi = {10.5220/0007364503720380} }
+
+The programs are based on this repo:
+https://github.com/plutoyuxie/AutoEncoder-SSIM-for-unsupervised-anomaly-detection-/tree/master
