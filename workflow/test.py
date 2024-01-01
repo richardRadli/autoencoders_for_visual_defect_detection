@@ -127,15 +127,17 @@ class TestAutoEncoder:
         step = end / number_of_steps
         return np.arange(start=start, stop=end, step=step)
 
-    def plot_rec_images(self, test_img, rec_img, mask, vis_img, idx):
+    def plot_rec_images(self, test_img: np.ndarray, rec_img: np.ndarray, mask: np.ndarray, vis_img: np.ndarray,
+                        idx: int) -> None:
         """
+        Plot and save a grid of images including the test image, reconstructed image, mask, and visualized image.
 
-        :param test_img:
-        :param rec_img:
-        :param mask:
-        :param vis_img:
-        :param idx:
-        :return:
+        :param test_img: The original test image (BGR format).
+        :param rec_img: The reconstructed image (BGR format).
+        :param mask: The mask image (grayscale).
+        :param vis_img: The visualized image (BGR format).
+        :param idx: Index for naming the saved file.
+        :return: None
         """
 
         filename = os.path.join(self.save_reconstruction_plot_dir, f"{idx}_reconstruction.png")
