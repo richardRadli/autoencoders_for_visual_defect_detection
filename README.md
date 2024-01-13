@@ -15,24 +15,24 @@ MVTec Texture 1 and 2 datasets can be downloaded from the following link:
 https://www.mydrive.ch/shares/46066/8338a11f32bb1b7b215c5381abe54ebf/download/420939225-1629955758/textures.zip
 
 Our dataset can be downloaded from here:
-
+https://drive.google.com/file/d/1LOFXTxGGufXJWHQdBbxTfBAzhwpGmL0j/view?usp=drive_link
 
 ## Requirement
 Make sure you have the following dependencies installed:
 
 ```bash
-colorlog==6.7.0
-colorthief==0.2.1
-kornia==0.7.0
-matplotlib==3.7.1
-numpy==1.23.5
-opencv-python==4.5.5.64
-pandas==2.0.0
-sklearn==0.0.post1
-torch==2.0.0+cu117
-torchsummary==1.5.1
-torchvision==0.15.1+cu117
-tqdm==4.65.0
+colorlog>=6.7.0
+colorthief>=0.2.1
+kornia>=0.7.0
+matplotlib>=3.7.1
+numpy>=1.23.5
+opencv-python>=4.5.5.64
+pandas>=2.0.0
+sklearn>=0.0.post1
+torch>=2.0.0+cu117
+torchsummary>=1.5.1
+torchvision>=0.15.1+cu117
+tqdm>=4.65.0
 ```
 
 ## Installation
@@ -75,17 +75,17 @@ Below are some pictures of how the program works.
 
 <figure align="center">
   <figcaption>ROC curve:</figcaption>
-  <img src="poc_images/roc.png" alt="ROC_curve" width="400"/>
+  <img src="poc_images/roc.png" alt="ROC_curve" width="640"/>
 </figure>
 
 <figure align="center">
   <figcaption>Training visualization:</figcaption>
-  <img src="poc_images/190_0.png" alt="training_visualization" width="400"/>
+  <img src="poc_images/190_0.png" alt="training_visualization" width="640"/>
 </figure>
 
 <figure align="center">
   <figcaption>Reconstruction visualization:</figcaption>
-  <img src="poc_images/0_reconstruction.png" alt="reconstruction_visualization" width="400"/>
+  <img src="poc_images/0_reconstruction.png" alt="reconstruction_visualization" width="640"/>
 </figure>
 
 
