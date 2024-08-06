@@ -1,14 +1,15 @@
 import cv2
-import logging
 import math
 import numpy as np
 import os
 import random
 
 from typing import List, Tuple
+from tqdm import tqdm
 
-from config.config import ConfigAugmentation
-from config.network_config import dataset_images_path_selector
+from config.data_paths import JSON_FILES_PATHS
+from config.dataset_config import dataset_images_path_selector
+from utils.utils import load_config_json
 
 
 def generate_image_list(train_data_dir: str, augment_num: int) -> List[Tuple[str, int]]:
@@ -109,40 +110,39 @@ def augment_images(filelist: List[Tuple[str, int]], aug_out_dir: str, cfg) -> No
     :return: None
     """
 
-    for filepath, n in filelist:
+    for filepath, n in tqdm(filelist, total=len(filelist), desc='Augmenting images'):
         img = cv2.imread(filepath)
-        if img.shape[:2] != cfg.img_size:
-            img = cv2.resize(img, cfg.img_size)
+        if img.shape[:2] != cfg.get("img_size"):
+            img = cv2.resize(img, cfg.get("img_size"))
         filename = filepath.split(os.sep)[-1]
         dot_pos = filename.rfind('.')
         imgname = filename[:dot_pos]
         ext = filename[dot_pos:]
 
-        logging.info('Augmenting {} ...'.format(filename))
         for i in range(n):
             img_varied = img.copy()
             varied_imgname = '{}_{:0>3d}_'.format(imgname, i)
 
-            if random.random() < cfg.p_rotate:
+            if random.random() < cfg.get("p_rotate"):
                 img_varied_ = random_rotate(
                     img_varied,
-                    cfg.rotate_angle_vari,
-                    cfg.p_rotate_crop)
-                if img_varied_.shape[0] >= cfg.crop_size[0] and img_varied_.shape[1] >= cfg.crop_size[1]:
+                    cfg.get("rotate_angle_vari"),
+                    cfg.get("p_rotate_crop"))
+                if img_varied_.shape[0] >= cfg.get("crop_size")[0] and img_varied_.shape[1] >= cfg.get("crop_size")[1]:
                     img_varied = img_varied_
                 varied_imgname += 'r'
 
-            if random.random() < cfg.p_crop:
+            if random.random() < cfg.get("p_crop"):
                 img_varied = random_crop(
                     img_varied,
-                    cfg.crop_size)
+                    cfg.get("crop_size"))
                 varied_imgname += 'c'
 
-            if random.random() < cfg.p_horizontal_flip:
+            if random.random() < cfg.get("p_horizontal_flip"):
                 img_varied = cv2.flip(img_varied, 1)
                 varied_imgname += 'h'
 
-            if random.random() < cfg.p_vertical_flip:
+            if random.random() < cfg.get("p_vertical_flip"):
                 img_varied = cv2.flip(img_varied, 0)
                 varied_imgname += 'v'
 
@@ -154,25 +154,24 @@ def main() -> None:
     """
     Main function for data augmentation.
 
-    :return: None
+    Return:
+         None
     """
 
-    try:
-        aug_cfg = ConfigAugmentation().parse()
+    aug_cfg = (
+        load_config_json(json_schema_filename=JSON_FILES_PATHS.get_data_path("config_schema_augmentation"),
+                         json_filename=JSON_FILES_PATHS.get_data_path("config_augmentation"))
+    )
 
-        if aug_cfg.do_augmentation:
-            train_data_dir = dataset_images_path_selector().get(aug_cfg.dataset_type, {}).get("train")
-            aug_out_dir = dataset_images_path_selector().get(aug_cfg.dataset_type, {}).get("aug")
+    if aug_cfg.get("do_augmentation"):
+        train_data_dir = dataset_images_path_selector().get(aug_cfg.get("dataset_type"), {}).get("train")
+        aug_out_dir = dataset_images_path_selector().get(aug_cfg.get("dataset_type"), {}).get("aug")
 
-            if not train_data_dir or not aug_out_dir:
-                print("Error: Missing or invalid paths for training data or augmentation output.")
-                return
+        if not train_data_dir or not aug_out_dir:
+            raise ValueError("Error: Missing or invalid paths for training data or augmentation output.")
 
-            img_list = generate_image_list(train_data_dir=train_data_dir, augment_num=aug_cfg.augment_num)
-            augment_images(filelist=img_list, aug_out_dir=aug_out_dir, cfg=aug_cfg)
-
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        img_list = generate_image_list(train_data_dir=train_data_dir, augment_num=aug_cfg.get("augment_num"))
+        augment_images(filelist=img_list, aug_out_dir=aug_out_dir, cfg=aug_cfg)
 
 
 if __name__ == "__main__":

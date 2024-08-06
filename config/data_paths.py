@@ -10,8 +10,9 @@ class _Const(object):
     user = os.getlogin()
     root_mapping = {
         'ricsi': {
-            "PROJECT_ROOT": 'D:/AE/storage/',
-            "DATASET_ROOT": 'D:/mvtec/'
+            "PROJECT_ROOT": 'C:/Users/ricsi/Documents/research/autoencoders_for_visual_defect_detection',
+            "DATASET_ROOT": 'D:/storage/AE/datasets',
+            "STORAGE_ROOT": 'D:/storage/AE'
         }
     }
 
@@ -19,6 +20,7 @@ class _Const(object):
         root_path = root_mapping[user]
         PROJECT_ROOT = root_path["PROJECT_ROOT"]
         DATASET_ROOT = root_path["DATASET_ROOT"]
+        STORAGE_ROOT = root_path["STORAGE_ROOT"]
     else:
         raise ValueError(f"Wrong user name: {user}!")
 
@@ -39,6 +41,8 @@ class _Const(object):
                 dir_path = os.path.join(cls.PROJECT_ROOT, path)
             elif root_type == "DATASET":
                 dir_path = os.path.join(cls.DATASET_ROOT, path)
+            elif root_type == "STORAGE":
+                dir_path = os.path.join(cls.STORAGE_ROOT, path)
             else:
                 raise ValueError("Wrong root type!")
 
@@ -69,13 +73,13 @@ class Images(_Const):
     # ------------------------------------------------------------------------------------------------------------------
     def __init__(self):
         super().__init__()
-        self.create_directories(self.dirs_data, "PROJECT")
+        self.create_directories(self.dirs_data, "STORAGE")
 
     # ------------------------------------------------------------------------------------------------------------------
     # ------------------------------------------ G E T   D A T A   P A T H ---------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------
     def get_data_path(self, key):
-        return os.path.join(self.PROJECT_ROOT, self.dirs_data.get(key, ""))
+        return os.path.join(self.STORAGE_ROOT, self.dirs_data.get(key, ""))
 
 
 class Data(_Const):
@@ -96,13 +100,13 @@ class Data(_Const):
     # ------------------------------------------------------------------------------------------------------------------
     def __init__(self):
         super().__init__()
-        self.create_directories(self.dirs_data, "PROJECT")
+        self.create_directories(self.dirs_data, "STORAGE")
 
     # ------------------------------------------------------------------------------------------------------------------
     # ------------------------------------------ G E T   D A T A   P A T H ---------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------
     def get_data_path(self, key):
-        return os.path.join(self.PROJECT_ROOT, self.dirs_data.get(key, ""))
+        return os.path.join(self.STORAGE_ROOT, self.dirs_data.get(key, ""))
 
 
 class Datasets(_Const):
@@ -155,7 +159,39 @@ class Datasets(_Const):
         return os.path.join(self.DATASET_ROOT, self.dirs_dataset.get(key, ""))
 
 
+class ConfigFilePaths(_Const):
+    dirs_config_paths = {
+        "config_augmentation":
+            "config/augmentation_config.json",
+        "config_schema_augmentation":
+            "config/augmentation_config_schema.json",
+
+        "config_training":
+            "config/training_config.json",
+        "config_schema_training":
+            "config/training_config_schema.json",
+
+        "config_testing":
+            "config/testing_config.json",
+        "config_schema_testing":
+            "config/testing_config_schema.json"
+    }
+
+    # ------------------------------------------------------------------------------------------------------------------
+    # ---------------------------------------------------- I N I T -----------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
+    def __init__(self):
+        super().__init__()
+
+    # ------------------------------------------------------------------------------------------------------------------
+    # ------------------------------------------ G E T   D A T A   P A T H ---------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
+    def get_data_path(self, key):
+        return os.path.join(self.PROJECT_ROOT, self.dirs_config_paths.get(key, ""))
+    
+    
 CONST: _Const = _Const()
+JSON_FILES_PATHS: ConfigFilePaths = ConfigFilePaths()
 IMAGES_PATH: Images = Images()
 DATA_PATH: Data = Data()
 DATASET_PATH: Datasets = Datasets()

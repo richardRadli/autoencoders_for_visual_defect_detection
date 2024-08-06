@@ -1,0 +1,9 @@
+{
+  "network_type": "AE",
+  "dataset_type": "texture_1",
+  "vis_results": true,
+  "img_size": [256, 256],
+  "crop_size": [128, 128],
+  "stride": 32,
+  "device": "cuda"
+}

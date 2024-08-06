@@ -7,62 +7,105 @@ import numpy as np
 import os
 import torch
 
-from glob import glob
 from skimage import morphology
 from skimage.metrics import structural_similarity as ssim
 from sklearn.metrics import confusion_matrix
 from tqdm import tqdm
 
-from config.config import ConfigTesting
-from config.network_config import network_configs, dataset_data_path_selector, dataset_images_path_selector
+from config.data_paths import JSON_FILES_PATHS
+from config.network_config import network_configs
+from config.dataset_config import dataset_data_path_selector, dataset_images_path_selector
 from models.network_selector import NetworkFactory
-from utils.utils import (setup_logger, use_gpu_if_available, get_patch, patch2img, set_img_color, avg_of_list,
-                         find_latest_file_in_latest_directory, create_save_dirs, create_timestamp)
+from utils.utils import (setup_logger, device_selector, get_patch, patch2img, set_img_color, avg_of_list,
+                         find_latest_file_in_latest_directory, create_save_dirs, create_timestamp, load_config_json,
+                         file_reader)
 
 
 class TestAutoEncoder:
     def __init__(self):
         timestamp = create_timestamp()
         self.logger = setup_logger()
-        self.test_cfg = ConfigTesting().parse()
-        network_cfg = network_configs().get(self.test_cfg.network_type)
 
-        self.mask_size = self.test_cfg.patch_size \
-            if self.test_cfg.img_size[0] - self.test_cfg.crop_size[0] < self.test_cfg.stride \
-            else self.test_cfg.img_size[0]
+        train_cfg = (
+            load_config_json(
+                json_schema_filename=JSON_FILES_PATHS.get_data_path("config_schema_training"),
+                json_filename=JSON_FILES_PATHS.get_data_path("config_training")
+            )
+        )
 
-        test_dataset_path = (dataset_images_path_selector().get(self.test_cfg.dataset_type).get("test"))
-        self.test_images = sorted(glob(os.path.join(test_dataset_path, "*.png")))
+        self.test_cfg = (
+            load_config_json(
+                json_schema_filename=JSON_FILES_PATHS.get_data_path("config_schema_testing"),
+                json_filename=JSON_FILES_PATHS.get_data_path("config_testing")
+            )
+        )
 
-        gt_dataset_path = (dataset_images_path_selector().get(self.test_cfg.dataset_type).get("gt"))
-        self.gt_images = sorted(glob(os.path.join(gt_dataset_path, "*.png")))
+        network_type = self.test_cfg.get("network_type")
+        network_cfg = network_configs(train_cfg).get(network_type)
+        dataset_type = self.test_cfg.get("dataset_type")
 
-        roc_dir = dataset_data_path_selector().get(self.test_cfg.dataset_type).get("roc_plot")
-        self.save_roc_plot_dir = create_save_dirs(directory_path=roc_dir,
-                                                  network_type=self.test_cfg.network_type,
-                                                  timestamp=timestamp)
+        self.mask_size = self.test_cfg.get("patch_size") \
+            if self.test_cfg.get("img_size")[0] - self.test_cfg.get("crop_size")[0] < self.test_cfg.get("stride") \
+            else self.test_cfg.get("img_size")[0]
 
-        rec_dir = dataset_data_path_selector().get(self.test_cfg.dataset_type).get("reconstruction_images")
-        self.save_reconstruction_plot_dir = create_save_dirs(directory_path=rec_dir,
-                                                             network_type=self.test_cfg.network_type,
-                                                             timestamp=timestamp)
+        test_dataset_path = (
+            dataset_images_path_selector().get(dataset_type).get("test")
+        )
+        self.test_images = (
+            file_reader(test_dataset_path, "png")
+        )
 
-        self.device = use_gpu_if_available()
-        self.model = NetworkFactory.create_network(network_type=self.test_cfg.network_type,
-                                                   network_cfg=network_cfg,
-                                                   device=self.device)
+        gt_dataset_path = (
+            dataset_images_path_selector().get(dataset_type).get("gt")
+        )
+        self.gt_images = (
+            file_reader(gt_dataset_path, "png")
+        )
+
+        roc_dir = (
+            dataset_data_path_selector().get(dataset_type).get("roc_plot")
+        )
+
+        self.save_roc_plot_dir = (
+            create_save_dirs(
+                directory_path=roc_dir,
+                network_type=network_type,
+                timestamp=timestamp
+            )
+        )
+
+        rec_dir = (
+            dataset_data_path_selector().get(dataset_type).get("reconstruction_images")
+        )
+
+        self.save_reconstruction_plot_dir = (
+            create_save_dirs(
+                directory_path=rec_dir,
+                network_type=network_type,
+                timestamp=timestamp
+            )
+        )
+
+        self.device = (
+            device_selector(self.test_cfg.get("device"))
+        )
+
+        self.model = (
+            NetworkFactory.create_network(
+                network_type=network_type,
+                network_cfg=network_cfg)
+        ).to(self.device)
 
         state_dict = torch.load(
             find_latest_file_in_latest_directory(
                 path=str(os.path.join(
-                    dataset_data_path_selector().get(self.test_cfg.dataset_type).get("model_weights_dir"),
-                    self.test_cfg.network_type)
+                    dataset_data_path_selector().get(dataset_type).get("model_weights_dir"),
+                    network_type)
                 )
             )
         )
 
         self.model.load_state_dict(state_dict)
-        self.model.to(self.device)
         self.model.eval()
 
     def get_residual_map(self, test_img_path: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -75,25 +118,30 @@ class TestAutoEncoder:
 
         test_img = cv2.imread(test_img_path)
 
-        if test_img.shape[:2] != self.test_cfg.img_size:
-            test_img = cv2.resize(test_img, self.test_cfg.img_size)
-        if self.test_cfg.img_size[0] != self.mask_size:
-            tmp = (self.test_cfg.img_size[0] - self.mask_size) // 2
+        if test_img.shape[:2] != self.test_cfg.get("img_size"):
+            test_img = cv2.resize(test_img, self.test_cfg.get("img_size"))
+        if self.test_cfg.get("img_size")[0] != self.mask_size:
+            tmp = (self.test_cfg.get("img_size")[0] - self.mask_size) // 2
             test_img = test_img[tmp:tmp + self.mask_size, tmp:tmp + self.mask_size]
 
         test_img_ = test_img / 255.
 
-        if test_img.shape[:2] == self.test_cfg.crop_size:
+        if test_img.shape[:2] == self.test_cfg.get("crop_size"):
             test_img_ = np.expand_dims(test_img_, 0)
             decoded_img = self.model(test_img_)
         else:
-            patches = get_patch(test_img_, self.test_cfg.crop_size[0], self.test_cfg.stride)
+            patches = get_patch(test_img_, self.test_cfg.get("crop_size")[0], self.test_cfg.get("stride"))
             patches = np.transpose(patches, (0, 3, 1, 2))
             patches = torch.from_numpy(patches).float()
             patches = patches.to(self.device)
             patches = self.model(patches)
             decoded_img = (
-                patch2img(patches, self.test_cfg.img_size[0], self.test_cfg.crop_size[0], self.test_cfg.stride)
+                patch2img(
+                    patches,
+                    self.test_cfg.get("img_size")[0],
+                    self.test_cfg.get("crop_size")[0],
+                    self.test_cfg.get("stride")
+                )
             )
 
         rec_img = np.reshape((decoded_img * 255.).astype('uint8'), test_img.shape)
@@ -226,7 +274,7 @@ class TestAutoEncoder:
             mask = np.where(mask == 255, 1, 0)
 
             gt = cv2.imread(gt_img, 0)
-            gt = cv2.resize(gt, self.test_cfg.img_size)
+            gt = cv2.resize(gt, self.test_cfg.get("img_size"))
             gt = cv2.threshold(gt, 128, 255, cv2.THRESH_BINARY)[1]
             gt = gt.ravel()
             gt = np.where(gt == 255, 1, 0)
@@ -248,7 +296,7 @@ class TestAutoEncoder:
                 true_pos_rate = true_pos / (true_pos + false_neg)
             all_tpr.append(true_pos_rate)
 
-            if self.test_cfg.vis_results:
+            if self.test_cfg.get("vis_results"):
                 vis_img = set_img_color(test_img.copy(), mask_copy, weight_foreground=0.3)
                 self.plot_rec_images(test_img, rec_img, mask_copy, vis_img, idx)
 

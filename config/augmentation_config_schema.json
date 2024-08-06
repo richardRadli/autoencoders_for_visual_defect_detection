@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FCNN Configuration",
+  "type": "object",
+  "properties": {
+    "do_augmentation": {
+      "type": "boolean",
+      "description": "Whether to apply data augmentation."
+    },
+    "dataset_type": {
+      "type": "string",
+      "enum": ["texture_1", "texture_2"],
+      "description": "The name of the selected dataset."
+    },
+    "img_size": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "The size of the input images as [width, height]."
+    },
+    "crop_size": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "The size of the crops extracted from the image as [width, height]."
+    },
+    "augment_num": {
+      "type": "integer",
+      "description": "The number of crops to generate for augmentation."
+    },
+    "p_rotate": {
+      "type": "number",
+      "format": "float",
+      "description": "Probability of applying rotation to the image."
+    },
+    "rotate_angle_vari": {
+      "type": "number",
+      "format": "float",
+      "description": "Maximum angle of rotation in degrees."
+    },
+    "p_rotate_crop": {
+      "type": "number",
+      "format": "float",
+      "description": "Probability of applying rotation to crops."
+    },
+    "p_crop": {
+      "type": "integer",
+      "enum": [0, 1],
+      "description": "Whether to apply cropping or not."
+    },
+    "p_horizontal_flip": {
+      "type": "number",
+      "format": "float",
+      "description": "Probability of applying horizontal flip."
+    },
+    "p_vertical_flip": {
+      "type": "number",
+      "format": "float",
+      "description": "Probability of applying vertical flip."
+    },
+    "size_of_cover": {
+      "type": "integer",
+      "description": "Size of the rectangles used for covering the image."
+    }
+  },
+  "required": [
+    "do_augmentation",
+    "dataset_type",
+    "img_size",
+    "crop_size",
+    "augment_num",
+    "p_rotate",
+    "rotate_angle_vari",
+    "p_rotate_crop",
+    "p_crop",
+    "p_horizontal_flip",
+    "p_vertical_flip",
+    "size_of_cover"
+  ]
+}

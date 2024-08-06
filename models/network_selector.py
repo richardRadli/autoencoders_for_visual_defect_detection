@@ -1,5 +1,3 @@
-import torch
-
 from abc import ABC, abstractmethod
 
 from models.base_model import AutoEncoder
@@ -33,17 +31,19 @@ class ExtendedModelWrapper(BaseNetwork):
 
 
 class NetworkFactory:
+    _network_map = {
+        "AE": BaseModelWrapper,
+        "DAE": BaseModelWrapper,
+        "AEE": ExtendedModelWrapper,
+        "DAEE": ExtendedModelWrapper
+    }
+
     @staticmethod
-    def create_network(network_type, network_cfg, device=None):
-        if network_type == "AE" or network_type == "DAE":
-            model = BaseModelWrapper(network_cfg).model
-        elif network_type == "AEE" or network_type == "DAEE":
-            model = ExtendedModelWrapper(network_cfg).model
-        else:
-            raise ValueError("Wrong network type")
+    def create_network(network_type, network_cfg):
+        if network_type not in NetworkFactory._network_map:
+            raise ValueError(f"Invalid network type: {network_type}")
 
-        if device is None:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model_wrapper_class = NetworkFactory._network_map[network_type]
+        model = model_wrapper_class(network_cfg).model
 
-        model.to(device)
         return model

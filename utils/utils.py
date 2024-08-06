@@ -1,11 +1,14 @@
 import colorlog
 import cv2
 import gc
+import json
+import jsonschema
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+import re
 import time
 import torch
 import torch.nn as nn
@@ -13,7 +16,9 @@ import torchvision
 
 from datetime import datetime
 from functools import wraps
-from typing import Optional
+from jsonschema import validate
+from pathlib import Path
+from typing import Any, Callable, Optional, List, Union
 
 from utils.ssim_loss import SSIMLoss
 
@@ -63,17 +68,22 @@ def setup_logger():
     return logger
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-# --------------------------------------- U S E   G P U   I F   A V A I L A B L E --------------------------------------
-# ----------------------------------------------------------------------------------------------------------------------
-def use_gpu_if_available() -> torch.device:
+def device_selector(preferred_device: str) -> torch.device:
     """
     Provides information about the currently available GPUs and returns a torch device for training and inference.
 
-    :return: A torch device for either "cuda" or "cpu".
+    Args:
+        preferred_device: A torch device for either "cuda" or "cpu".
+
+    Returns:
+        torch.device: A torch.device object representing the selected device for training and inference.
     """
 
-    if torch.cuda.is_available():
+    if preferred_device not in ["cuda", "cpu"]:
+        logging.warning("Preferred device is not valid. Using CPU instead.")
+        return torch.device("cpu")
+
+    if preferred_device == "cuda" and torch.cuda.is_available():
         cuda_info = {
             'CUDA Available': [torch.cuda.is_available()],
             'CUDA Device Count': [torch.cuda.device_count()],
@@ -83,10 +93,15 @@ def use_gpu_if_available() -> torch.device:
 
         df = pd.DataFrame(cuda_info)
         logging.info(df)
-    else:
-        logging.info("Only CPU is available!")
+        return torch.device("cuda")
 
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if preferred_device in ["cuda"] and not torch.cuda.is_available():
+        logging.info("Only CPU is available!")
+        return torch.device("cpu")
+
+    if preferred_device == "cpu":
+        logging.info("Selected CPU device")
+        return torch.device("cpu")
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -209,6 +224,38 @@ def set_img_color(img: np.ndarray, predict_mask: np.ndarray, weight_foreground: 
     return img
 
 
+def numerical_sort(value: str) -> List[Union[str, int]]:
+    """
+    Sorts numerical values in a string ensuring correct numerical sorting.
+
+    Args:
+        value (str): The input string containing numerical and non-numerical parts.
+
+    Returns:
+        List[Union[str, int]]: A list containing both strings and integers sorted by numerical value.
+    """
+
+    numbers = re.compile(r'(\d+)')
+    parts = numbers.split(value)
+    parts[1::2] = map(int, parts[1::2])
+    return parts
+
+
+def file_reader(file_path: str, extension: str) -> List[str]:
+    """
+    Reads files with a specific extension from a given directory and sorts them numerically.
+
+    Args:
+        file_path (str): The path to the directory containing the files.
+        extension (str): The extension of the files to be read.
+
+    Returns:
+        List[str]: A sorted list of filenames with the specified extension.
+    """
+
+    return sorted([str(file) for file in Path(file_path).glob(f'*.{extension}')], key=numerical_sort)
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # ----------------------- F I N D   L A T E S T   F I L E   I N   L A T E S T   D I R E C T O R Y ----------------------
 # ----------------------------------------------------------------------------------------------------------------------
@@ -241,25 +288,38 @@ def find_latest_file_in_latest_directory(path: str) -> str:
     return latest_file
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-# ------------------------------------- M E A S U R E   E X E C U T I O N   T I M E ------------------------------------
-# ----------------------------------------------------------------------------------------------------------------------
-def measure_execution_time(func):
+def measure_execution_time(func: Callable) -> Callable:
     """
-    Decorator to measure the execution time.
+    Decorator to measure the execution time of a function.
 
-    :param func:
-    :return:
+    Args:
+        func (Callable): The function to be decorated.
+
+    Returns:
+        Callable: The decorated function.
     """
 
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs) -> Any:
+        """
+        Wrapper function to measure execution time.
+
+        Args:
+            *args: Positional arguments passed to the function.
+            **kwargs: Keyword arguments passed to the function.
+
+        Returns:
+            Any: The result of the function.
+        """
+
         start_time = time.time()
         result = func(*args, **kwargs)
         end_time = time.time()
-        execution_time = end_time - start_time
-        logging.info(f"Execution time of {func.__name__}: {execution_time} seconds")
+        wrapper.execution_time = end_time - start_time
+        logging.info(f"Execution time of {func.__name__}: {wrapper.execution_time:.4f} seconds")
         return result
+
+    wrapper.execution_time = None
     return wrapper
 
 
@@ -359,3 +419,25 @@ def avg_of_list(my_list):
     """
 
     return sum(my_list) / len(my_list)
+
+
+def load_config_json(json_schema_filename: str, json_filename: str):
+    """
+
+    :param json_schema_filename:
+    :param json_filename:
+    :return:
+    """
+
+    with open(json_schema_filename, "r") as schema_file:
+        schema = json.load(schema_file)
+
+    with open(json_filename, "r") as config_file:
+        config = json.load(config_file)
+
+    try:
+        validate(config, schema)
+        logging.info("JSON data is valid.")
+        return config
+    except jsonschema.exceptions.ValidationError as err:
+        logging.error(f"JSON data is invalid: {err}")

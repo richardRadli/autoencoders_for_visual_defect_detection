@@ -1,5 +1,4 @@
 import cv2
-import glob
 import random
 import os
 
@@ -7,8 +6,9 @@ from colorthief import ColorThief
 from concurrent.futures import ProcessPoolExecutor
 from tqdm import tqdm
 
-from config.config import ConfigAugmentation
-from config.network_config import dataset_images_path_selector
+from config.data_paths import JSON_FILES_PATHS
+from config.dataset_config import dataset_images_path_selector
+from utils.utils import load_config_json, file_reader
 
 
 def process_image(image_path: str, path_covered: str, cfg) -> None:
@@ -28,18 +28,18 @@ def process_image(image_path: str, path_covered: str, cfg) -> None:
     color_thief = ColorThief(image_path)
     dominant_color = color_thief.get_color(quality=1)
 
-    rand_x = random.randint(0, (cfg.crop_size[0] - cfg.size_of_cover))
-    rand_y = random.randint(0, (cfg.crop_size[1] - cfg.size_of_cover))
+    rand_x = random.randint(0, (cfg.get("crop_size")[0] - cfg.get("size_of_cover")))
+    rand_y = random.randint(0, (cfg.get("crop_size")[1] - cfg.get("size_of_cover")))
 
     image_covered = cv2.rectangle(
         img=img_good,
         pt1=(rand_x, rand_y),
-        pt2=(rand_x + cfg.size_of_cover, rand_y + cfg.size_of_cover),
+        pt2=(rand_x + cfg.get("size_of_cover"), rand_y + cfg.get("size_of_cover")),
         color=dominant_color,
         thickness=-1
     )
 
-    file_name = os.path.join(path_covered, name + ".png")
+    file_name = os.path.join(path_covered, f'{name}.png')
     cv2.imwrite(file_name, image_covered)
 
 
@@ -50,13 +50,22 @@ def main() -> None:
     :return: None
     """
 
-    cfg = ConfigAugmentation().parse()
-    path_good = dataset_images_path_selector().get(cfg.dataset_type).get("aug")
-    path_covered = dataset_images_path_selector().get(cfg.dataset_type).get("noise")
+    cfg = (
+        load_config_json(json_schema_filename=JSON_FILES_PATHS.get_data_path("config_schema_augmentation"),
+                         json_filename=JSON_FILES_PATHS.get_data_path("config_augmentation"))
+    )
 
-    images_good = sorted(glob.glob(path_good + "/*.png"))
+    path_good = (
+        dataset_images_path_selector().get(cfg.get("dataset_type")).get("aug")
+    )
 
-    with ProcessPoolExecutor() as executor:
+    path_covered = (
+        dataset_images_path_selector().get(cfg.get("dataset_type")).get("noise")
+    )
+
+    images_good = file_reader(path_good, "png")
+
+    with ProcessPoolExecutor(max_workers=os.cpu_count()//2) as executor:
         futures = []
         for image_good in images_good:
             futures.append(executor.submit(process_image, image_good, path_covered, cfg))
