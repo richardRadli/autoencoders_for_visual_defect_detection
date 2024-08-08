@@ -4,8 +4,8 @@
   "network_type": "AE",
   "epochs": 200,
   "batch_size": 128,
-  "learning_rate": 0.0002,
-  "weight_decay": 0.00001,
+  "learning_rate": 2e-4,
+  "weight_decay": 1e-5,
   "loss_function_type": "ssim",
   "decrease_learning_rate": false,
   "step_size": 10,
@@ -16,5 +16,6 @@
   "latent_space_dimension": 100,
   "vis_during_training": true,
   "vis_interval": 10,
-  "device": "cuda"
+  "device": "cuda",
+  "early_stopping": 10
 }

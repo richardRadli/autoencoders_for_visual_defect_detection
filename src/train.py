@@ -9,12 +9,13 @@ from tqdm import tqdm
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
-from torchsummary import summary
+from torchinfo import summary
 
 from config.network_config import network_configs
 from config.dataset_config import dataset_images_path_selector, dataset_data_path_selector
 from config.data_paths import JSON_FILES_PATHS
 from dataloaders.data_loader_ae import MVTecDataset
+from dataloaders.data_loader_dae import MVTecDatasetDenoising
 from models.network_selector import NetworkFactory
 from utils.utils import create_timestamp, device_selector, setup_logger, get_loss_function, create_save_dirs, \
     visualize_images, load_config_json
@@ -34,7 +35,7 @@ class TrainAutoEncoder:
             )
         )
 
-        if self.train_cfg.get("network_type") not in ["AE", "AEE"]:
+        if self.train_cfg.get("network_type") not in ["AE", "AEE", "DAE", "DAEE"]:
             raise ValueError(f"wrong network type: {self.train_cfg}")
 
         self.network_type = self.train_cfg.get("network_type")
@@ -98,7 +99,20 @@ class TrainAutoEncoder:
         :return:
         """
 
-        dataset = MVTecDataset(root_dir=dataset_images_path_selector().get(self.dataset_type).get("aug"))
+        if self.network_type in ["AE", "AEE"]:
+            dataset = (
+                MVTecDataset(
+                    root_dir=dataset_images_path_selector().get(self.dataset_type).get("aug")
+                )
+            )
+        else:
+            dataset = (
+                MVTecDatasetDenoising(
+                    root_dir=dataset_images_path_selector().get(self.dataset_type).get("aug"),
+                    noise_dir=dataset_images_path_selector().get(self.dataset_type).get("noise")
+                )
+            )
+
         dataset_size = len(dataset)
         val_size = int(self.train_cfg.get("validation_split") * dataset_size)
         train_size = dataset_size - val_size
@@ -114,59 +128,84 @@ class TrainAutoEncoder:
 
         return train_dataloader, val_dataloader
 
-    def train_loop(self, epoch, train_losses):
+    def train_loop(self, epoch: int, train_losses: list) -> list:
+        """
+
+        :param epoch:
+        :param train_losses:
+        :return:
+        """
+
         self.model.train()
         for batch_idx, images in tqdm(enumerate(self.train_dataloader),
                                       total=len(self.train_dataloader),
                                       desc=colorama.Fore.GREEN + "Training"):
-            images = images.to(self.device)
+            if self.network_type in ["AE", "AEE"]:
+                images = images.to(self.device)
+                recon = self.model(images)
+                train_loss = 1 - self.criterion(recon, images)
+            else:
+                images, noise_images = images
+                images = images.to(self.device)
+                noise_images = noise_images.to(self.device)
+                recon = self.model(noise_images)
+                train_loss = 1 - self.criterion(recon, images)
+
             self.optimizer.zero_grad()
-            outputs = self.model(images)
-            train_loss = self.criterion(outputs, images)
             train_loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
             self.optimizer.step()
             train_losses.append(train_loss.item())
 
-            if (
-                    self.train_cfg.get("vis_during_training")
-                    and (epoch % self.train_cfg.get("vis_interval") == 0)
-                    and batch_idx == 0
-            ):
+            if (self.train_cfg.get("vis_during_training") and (epoch % self.train_cfg.get("vis_interval") == 0) and
+                    batch_idx == 0):
                 vis_dir = (
                     create_save_dirs(
-                        directory_path=dataset_data_path_selector().get(self.dataset_type).get(
-                            "training_vis"),
+                        directory_path=dataset_data_path_selector().get(self.dataset_type).get("training_vis"),
                         network_type=self.network_type,
                         timestamp=self.timestamp
                     )
                 )
 
-                visualize_images(
-                    clean_images=images,
-                    outputs=outputs,
-                    epoch=epoch,
-                    batch_idx=batch_idx,
-                    dir_path=str(vis_dir)
-                )
+                if self.network_type in ["AE", "AEE"]:
+                    visualize_images(
+                        clean_images=images,
+                        outputs=recon,
+                        epoch=epoch,
+                        batch_idx=batch_idx,
+                        dir_path=str(vis_dir)
+                    )
+                else:
+                    visualize_images(
+                        clean_images=images,
+                        outputs=recon,
+                        noise_images=noise_images,
+                        epoch=epoch,
+                        batch_idx=batch_idx,
+                        dir_path=str(vis_dir)
+                    )
 
         return train_losses
 
     def valid_loop(self, val_losses):
         with torch.no_grad():
-            for batch_idx, images in tqdm(enumerate(self.valid_dataloader),
-                                          total=len(self.valid_dataloader),
-                                          desc=colorama.Fore.MAGENTA + "Validation"):
-                images = images.to(self.device)
-                outputs = self.model(images)
-                valid_loss = self.criterion(outputs, images)
+            for batch_idx, data in tqdm(enumerate(self.valid_dataloader),
+                                        total=len(self.valid_dataloader),
+                                        desc=colorama.Fore.MAGENTA + "Validation"):
+                if self.network_type in ["AE", "AEE"]:
+                    images = data.to(self.device)
+                    outputs = self.model(images)
+                    valid_loss = 1 - self.criterion(outputs, images)
+                else:
+                    images, noise_images = data
+                    images = images.to(self.device)
+                    noise_images = noise_images.to(self.device)
+                    outputs = self.model(noise_images)
+                    valid_loss = 1 - self.criterion(outputs, images)
+
                 val_losses.append(valid_loss.item())
 
         return val_losses
 
-    # ------------------------------------------------------------------------------------------------------------------
-    # --------------------------------------------------- T R A I N ----------------------------------------------------
-    # ------------------------------------------------------------------------------------------------------------------
     def fit(self) -> None:
         """
         Train the model.
@@ -176,6 +215,7 @@ class TrainAutoEncoder:
 
         best_valid_loss = float('inf')
         best_model_path = None
+        early_stopping_counter = 0
 
         train_losses = []
         valid_losses = []
@@ -203,17 +243,21 @@ class TrainAutoEncoder:
                 best_model_path = os.path.join(str(self.save_path), "epoch_" + str(epoch) + ".pt")
                 torch.save(self.model.state_dict(), best_model_path)
                 logging.info(f"New weights have been saved at epoch {epoch} with value of {valid_loss:.5f}")
+                early_stopping_counter = 0
             else:
                 logging.warning(f"No new weights have been saved. Best valid loss was {best_valid_loss:.5f},\n "
                                 f"current valid loss is {valid_loss:.5f}")
+
+                early_stopping_counter += 1
+
+                if early_stopping_counter >= self.train_cfg.get("early_stopping"):
+                    logging.info(f"Early stopping at epoch {epoch}")
+                    break
 
         self.writer.close()
         self.writer.flush()
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-# ------------------------------------------------------ M A I N -------------------------------------------------------
-# ----------------------------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
     try:
         ae = TrainAutoEncoder()

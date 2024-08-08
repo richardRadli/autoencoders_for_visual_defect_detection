@@ -3,9 +3,8 @@ import torch.nn as nn
 
 
 class AutoEncoder(nn.Module):
-
-    def __init__(self, cfg) -> None:
-        super().__init__()
+    def __init__(self, cfg):
+        super(AutoEncoder, self).__init__()
 
         self.encoder = nn.Sequential(
             nn.Conv2d(in_channels=cfg.get("input_channel"),
@@ -145,10 +144,3 @@ class AutoEncoder(nn.Module):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
-
-    @staticmethod
-    def _initialize_weights(layer):
-        if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.ConvTranspose2d):
-            nn.init.xavier_uniform_(layer.weight)
-            if layer.bias is not None:
-                nn.init.zeros_(layer.bias)

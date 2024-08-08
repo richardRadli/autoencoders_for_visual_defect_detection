@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 
 
-class MVTecDataset(Dataset):
+class MVTecDatasetDenoising(Dataset):
     def __init__(self, root_dir, noise_dir):
         self.root_dir = root_dir
         self.noise_dir = noise_dir
@@ -16,6 +16,7 @@ class MVTecDataset(Dataset):
         assert len(self.image_files) == len(self.noise_files), "Number of image files and noise files must be the same"
 
         self.transform = transforms.Compose([
+            transforms.Grayscale(num_output_channels=1),
             transforms.ToTensor()
         ])
 
@@ -28,8 +29,8 @@ class MVTecDataset(Dataset):
 
         try:
             # Load images
-            image = Image.open(image_path).convert('RGB')
-            noise_image = Image.open(noise_path).convert('RGB')
+            image = Image.open(image_path)
+            noise_image = Image.open(noise_path)
 
             # Apply transformations
             if self.transform:
@@ -40,4 +41,4 @@ class MVTecDataset(Dataset):
 
         except Exception as e:
             print(f"Error loading image at path {image_path} or {noise_path}: {e}")
-            return torch.zeros(3, 224, 224), torch.zeros(3, 224, 224)
+            return torch.zeros(1, 224, 224), torch.zeros(1, 224, 224)

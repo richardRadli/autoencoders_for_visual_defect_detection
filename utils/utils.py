@@ -18,9 +18,9 @@ from datetime import datetime
 from functools import wraps
 from jsonschema import validate
 from pathlib import Path
+from pytorch_msssim import SSIM
 from typing import Any, Callable, Optional, List, Union
 
-from utils.ssim_loss import SSIMLoss
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -381,7 +381,7 @@ def get_loss_function(loss_function_type: str):
 
     loss_functions = {
         "mse": nn.MSELoss(),
-        "ssim": SSIMLoss()
+        "ssim": SSIM(win_sigma=1.5, data_range=1, size_average=True, channel=1)
     }
 
     if loss_function_type in loss_functions:

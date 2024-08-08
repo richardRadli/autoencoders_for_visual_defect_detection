@@ -16,7 +16,7 @@ def network_configs(cfg):
             "img_size":
                 cfg.get("crop_size") if cfg.get("crop_it") else cfg.get("img_size"),
             "input_channel":
-                3
+                1
         },
         'DAE': {
             'kernel_size':
@@ -34,7 +34,7 @@ def network_configs(cfg):
             "img_size":
                 cfg.get("crop_size") if cfg.get("crop_it") else cfg.get("img_size"),
             "input_channel":
-                3
+                1
         },
         "AEE": {
             'kernel_size':
@@ -52,7 +52,7 @@ def network_configs(cfg):
             "img_size":
                 cfg.get("crop_size") if cfg.get("crop_it") else cfg.get("img_size"),
             "input_channel":
-                3
+                1
         },
         "DAEE": {
             'kernel_size':
@@ -70,7 +70,7 @@ def network_configs(cfg):
             "img_size":
                 cfg.get("crop_size") if cfg.get("crop_it") else cfg.get("img_size"),
             "input_channel":
-                3
+                1
         }
     }
 

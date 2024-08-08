@@ -91,6 +91,9 @@
     "device": {
       "type": "string",
       "enum": ["cuda", "cpu"]
+    },
+    "early_stopping": {
+      "type": "number"
     }
   },
   "required": [
