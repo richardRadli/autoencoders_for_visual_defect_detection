@@ -1,6 +1,6 @@
 {
-  "network_type": "AE",
-  "dataset_type": "texture_1",
+  "network_type": "AEE",
+  "dataset_type": "texture_2",
   "vis_results": false,
   "img_size": [256, 256],
   "crop_size": [128, 128],

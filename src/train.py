@@ -19,7 +19,7 @@ from dataloaders.data_loader_dae import MVTecDatasetDenoising
 from models.network_selector import NetworkFactory
 from typing import Tuple
 from utils.utils import create_timestamp, device_selector, setup_logger, get_loss_function, create_save_dirs, \
-    visualize_images, load_config_json
+    visualize_images, load_config_json, set_seed
 
 
 class TrainAutoEncoder:
@@ -35,6 +35,9 @@ class TrainAutoEncoder:
                 json_filename=JSON_FILES_PATHS.get_data_path("config_training")
             )
         )
+
+        if self.train_cfg.get("seed"):
+            set_seed(seed=1234)
 
         if self.train_cfg.get("network_type") not in ["AE", "AEE", "DAE", "DAEE"]:
             raise ValueError(f"wrong network type: {self.train_cfg}")

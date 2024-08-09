@@ -94,6 +94,9 @@
     },
     "early_stopping": {
       "type": "number"
+    },
+    "seed": {
+      "type": "boolean"
     }
   },
   "required": [

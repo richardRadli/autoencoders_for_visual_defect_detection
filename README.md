@@ -21,53 +21,70 @@ https://drive.google.com/file/d/1LOFXTxGGufXJWHQdBbxTfBAzhwpGmL0j/view?usp=drive
 Make sure you have the following dependencies installed:
 
 ```bash
-colorlog>=6.7.0
-colorthief>=0.2.1
-kornia>=0.7.0
-matplotlib>=3.7.1
-numpy>=1.23.5
-opencv-python>=4.5.5.64
-pandas>=2.0.0
-sklearn>=0.0.post1
-torch>=2.0.0+cu117
-torchsummary>=1.5.1
-torchvision>=0.15.1+cu117
-tqdm>=4.65.0
+colorlog~=6.8.2
+colorthief==0.2.1
+kornia~=0.7.3
+matplotlib~=3.8.1
+numpy~=1.26.4
+opencv-python~=4.9.0.80
+pandas~=2.1.0
+sklearn==0.0.post1
+torch~=2.2.1+cu121
+torchvision~=0.17.1+cu121
+tqdm~=4.66.2
+scikit-image~=0.22.0
+scikit-learn~=1.4.0
+colorama~=0.4.6
+Pillow~=10.2.0
+jsonschema~=4.23.0
+torchinfo~=1.8.0
 ```
 
 ## Installation
-First, clone/download this repository. In the const.py file you will find this:
+
+### Clone or Download the Repository
+Begin by cloning or downloading this repository to your local machine.
+
+### Update Configuration
+Open the _data_paths.py_ file. You will find the following dictionary:
 
 ```python
 root_mapping = {
     'ricsi': {
-        "PROJECT_ROOT": 'D:/AE/storage/',
-        "DATASET_ROOT": 'D:/mvtec/'
+        "PROJECT_ROOT": 'C:/Users/ricsi/Documents/research/autoencoders_for_visual_defect_detection',
+        "DATASET_ROOT": 'D:/storage/AE/datasets',
+        "STORAGE_ROOT": 'D:/storage/AE'
     }
 }
 ```
 
-- Update the designated username ('ricsi') to reflect the username associated with your logged-in operating system.
-- Utilize PROJECT_ROOT as the central repository for storing essential data such as weights and images, including ROC plots, within your project.
-- Employ DATASET_ROOT as the designated directory for managing datasets integral to the functioning of the project.
-- const.py will create all the necessary folders.
-- Download the datasets and place them into the appropropriate folders.
+#### PROJECT_ROOT
+- Update this path to the directory where the Python scripts and JSON files of the project are located. This directory will be used as the central repository for essential files such as weights, images, and ROC plots.
+#### DATASET_ROOT: 
+- Modify this path to point to the directory where your datasets are stored. This folder should contain all datasets necessary for the project.
+#### STORAGE_ROOT: 
+- Adjust this path to the location where you want to save project outputs and other data generated during the execution of the project.
 
+### Create Necessary Folders
+Run the __data_paths.py__ script. This will create all the required folders based on the paths specified in the configuration.
+
+### Download Datasets
+Obtain the necessary datasets and place them into the DATASET_ROOT directory as specified in your updated configuration
 
 ## Usage
-In the config.py file, key parameters and settings crucial for the training, testing, and data augmentation processes are centrally stored. These configurations provide a streamlined and organized approach to manage various aspects of the project, ensuring adaptability and ease of customization.
+### Setting Up Configuration Files
+Before running the Python scripts, you need to configure your settings by preparing the following JSON and Python files:
+- Training Configuration (training_config.json)
+- Testing Configuration (testing_config.json)
+- Augmentation Configuration (augmentation_config.json)
 
-If you wish to train the network with cropped images, the following steps must be executed:
+Once your configuration files are set up, run the Python scripts to train, test, or augment data
 
--  In _config.py_, in the _ConfigAugmentation()_ class, set _do_augmentation_ to True, select the desired _dataset_type_, and set up the augmentation parameters.
--  Run _augmentation.py_.
--  If you wish to train the denoising autoencoder, run _draw_rectangles.py_ as well. This script will create images with rectangles.
--  Back to _const.py_, in the _ConfigTraining()_ class, set up the desired parameters. Make sure that _crop_it_ is set to True.
--  Run _train_ae.py_ or _train_dae.py_. 
--  After training, set up the parameters in _ConfigTesting()_, and run _test.py_
-
-On the other hand, to execute the workflow without cropped images, skip _do_augmentation_ and set _crop_it_ to False.
-
+### Workflow
+- First you must create augmented images. To do that, run the augmentation.py file.
+- If you wish to use either the DAE or DAEE models, run draw_rectangles.py too.
+- Run train.py. It will train the selected network on the selected dataset. By default, early stopping is activated, and the program will only save the best weights.
+- Run test.py. It will evaluate the selected network on the selected dataset. Will measure ROC AUC, SSIM, MSE and save these values into a JSON file. 
 
 ## Screenshots
 
@@ -75,29 +92,32 @@ Below are some pictures of how the program works.
 
 <figure align="center">
   <figcaption>ROC curve:</figcaption>
-  <img src="poc_images/roc.png" alt="ROC_curve" width="640"/>
+  <img src="images/AE_texture_2roc.png" alt="ROC_curve" width="640"/>
 </figure>
 
 <figure align="center">
   <figcaption>Training visualization:</figcaption>
-  <img src="poc_images/190_0.png" alt="training_visualization" width="640"/>
+  <img src="images/80_0.png" alt="training_visualization" width="640"/>
 </figure>
 
 <figure align="center">
   <figcaption>Reconstruction visualization:</figcaption>
-  <img src="poc_images/0_reconstruction.png" alt="reconstruction_visualization" width="640"/>
+  <img src="images/0_reconstruction.png" alt="reconstruction_visualization" width="640"/>
 </figure>
 
 
 ## More info
 Our paper is accessable here:
-http://wscg.zcu.cz/WSCG2021/FULL/I79.pdf
+- Rádli, R., Czúni, L. (2021). About the Application of Autoencoders For Visual Defect Detection. 29. International Conference in Central Europe on Computer Graphics, Visualization and Computer Vision 2021
+[![10.24132/CSRN.2021.3002.20](https://zenodo.org/badge/DOI/10.24132/CSRN.2021.3002.20.svg)](http://wscg.zcu.cz/WSCG2021/FULL/I79.pdf)
 
 
 ## References
 
 Our article is mainly inspired by the following article:
-@inproceedings{inproceedings, author = {Bergmann, Paul and Löwe, Sindy and Fauser, Michael and Sattlegger, David and Steger, Carsten}, year = {2019}, month = {01}, pages = {372-380}, title = {Improving Unsupervised Defect Segmentation by Applying Structural Similarity to Autoencoders}, doi = {10.5220/0007364503720380} }
+- Bergmann, P., Löwe, S., Fauser, M., Sattlegger, D., & Steger, C. (2018). Improving unsupervised defect segmentation by applying structural similarity to autoencoders. arXiv preprint arXiv:1807.02011.
+[![10.48550/arXiv.1807.02011](https://zenodo.org/badge/DOI/10.48550/arXiv.1807.02011.svg)](https://arxiv.org/pdf/1807.02011)
 
 The programs are based on this repo:
 https://github.com/plutoyuxie/AutoEncoder-SSIM-for-unsupervised-anomaly-detection-/tree/master
+

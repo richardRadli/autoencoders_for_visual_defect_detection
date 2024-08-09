@@ -318,7 +318,7 @@ def visualize_images(
     plt.axis('off')  # Optional: hide the axes for better visualization
 
     plt.tight_layout()  # Adjust layout to prevent overlap
-    plt.savefig(filename)
+    plt.savefig(filename, dpi=300)
     plt.close()
     gc.collect()
 
@@ -416,3 +416,16 @@ def save_list_to_json(filename: str, results_dict: dict) -> None:
     
     with open(filename, "w") as json_file:
         json.dump(results_dict, json_file, indent=4)
+
+
+def set_seed(seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+
+    # If running on the CuDNN backend
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+    # Set a fixed value for the hash seed
+    os.environ['PYTHONHASHSEED'] = str(seed)
