@@ -1,5 +1,5 @@
 {
-  "network_type": "AEE",
+  "network_type": "DAE",
   "dataset_type": "texture_2",
   "vis_results": false,
   "img_size": [256, 256],
