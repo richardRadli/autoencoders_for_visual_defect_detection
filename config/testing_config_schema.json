@@ -42,6 +42,15 @@
     "device": {
       "type": "string",
       "enum": ["cuda", "cpu"]
+    },
+    "threshold_init": {
+      "type": "integer"
+    },
+    "threshold_end": {
+      "type": "integer"
+    },
+    "num_of_steps": {
+      "type": "number"
     }
   },
   "required": [

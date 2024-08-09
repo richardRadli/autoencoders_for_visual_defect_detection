@@ -15,10 +15,13 @@ def process_image(image_path: str, path_covered: str, cfg) -> None:
     """
     Process an image by adding a colored cover to a random region.
 
-    :param image_path: Path to the input image.
-    :param path_covered: Path to save the processed image.
-    :param cfg: Configuration object.
-    :return: None
+    Args:
+        image_path: Path to the input image.
+        path_covered: Path to save the processed image.
+        cfg: Configuration object.
+
+    Returns:
+         None
     """
 
     img_good = cv2.imread(image_path, 1)
@@ -47,12 +50,15 @@ def main() -> None:
     """
     Main function for processing augmented images with colored covers.
 
-    :return: None
+    Returns:
+         None
     """
 
     cfg = (
-        load_config_json(json_schema_filename=JSON_FILES_PATHS.get_data_path("config_schema_augmentation"),
-                         json_filename=JSON_FILES_PATHS.get_data_path("config_augmentation"))
+        load_config_json(
+            json_schema_filename=JSON_FILES_PATHS.get_data_path("config_schema_augmentation"),
+            json_filename=JSON_FILES_PATHS.get_data_path("config_augmentation")
+        )
     )
 
     path_good = (
@@ -65,7 +71,7 @@ def main() -> None:
 
     images_good = file_reader(path_good, "png")
 
-    with ProcessPoolExecutor(max_workers=os.cpu_count()//2) as executor:
+    with ProcessPoolExecutor(max_workers=cfg.get("num_workers")) as executor:
         futures = []
         for image_good in images_good:
             futures.append(executor.submit(process_image, image_good, path_covered, cfg))

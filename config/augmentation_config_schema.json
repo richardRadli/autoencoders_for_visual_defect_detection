@@ -67,6 +67,10 @@
     "size_of_cover": {
       "type": "integer",
       "description": "Size of the rectangles used for covering the image."
+    },
+    "num_workers": {
+      "type": "integer",
+      "description": "Number of CPU threads to use."
     }
   },
   "required": [

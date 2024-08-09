@@ -62,6 +62,8 @@ class TestAutoEncoder:
             file_reader(gt_dataset_path, "png")
         )
 
+        self.cached_gt_images = self.ground_truth_caching()
+
         roc_dir = (
             dataset_data_path_selector().get(dataset_type).get("roc_plot")
         )
@@ -111,12 +113,15 @@ class TestAutoEncoder:
     def get_residual_map(self, test_img_path: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Get the residual map of a test image after reconstruction.
-
-        :param test_img_path: Path to the test image.
-        :return: Tuple containing the original image, reconstructed image, and SSIM residual map.
+        
+        Args:
+            test_img_path: Path to the test image.
+        
+        Returns:
+             Tuple containing the original image, reconstructed image, and SSIM residual map.
         """
 
-        test_img = cv2.imread(test_img_path)
+        test_img = cv2.imread(test_img_path, 0)
 
         if test_img.shape[:2] != self.test_cfg.get("img_size"):
             test_img = cv2.resize(test_img, self.test_cfg.get("img_size"))
@@ -131,7 +136,8 @@ class TestAutoEncoder:
             decoded_img = self.model(test_img_)
         else:
             patches = get_patch(test_img_, self.test_cfg.get("crop_size")[0], self.test_cfg.get("stride"))
-            patches = np.transpose(patches, (0, 3, 1, 2))
+            patches = np.expand_dims(patches, 0)
+            patches = np.transpose(patches, (1, 0, 2, 3))
             patches = torch.from_numpy(patches).float()
             patches = patches.to(self.device)
             patches = self.model(patches)
@@ -145,8 +151,7 @@ class TestAutoEncoder:
             )
 
         rec_img = np.reshape((decoded_img * 255.).astype('uint8'), test_img.shape)
-        _, ssim_residual_map = ssim(test_img, rec_img, full=True, multichannel=True, channel_axis=2)
-        ssim_residual_map = 1 - np.mean(ssim_residual_map, axis=2)
+        ssim_residual_map = 1 - ssim(test_img, rec_img, win_size=11, full=True)[1]
 
         return test_img, rec_img, ssim_residual_map
 
@@ -154,7 +159,8 @@ class TestAutoEncoder:
         """
         Generate a depressing mask.
 
-        :return: Depressing mask as a NumPy array.
+        Returns:
+             Depressing mask as a NumPy array.
         """
 
         depr_mask = np.ones((self.mask_size, self.mask_size)) * 0.2
@@ -165,40 +171,47 @@ class TestAutoEncoder:
     def threshold_calculator(start: float, end: float, number_of_steps: int) -> np.ndarray:
         """
         Generate an array of thresholds within a specified range.
+        
+        Args:
+            start: Starting value of the threshold range.
+            end: Ending value of the threshold range.
+            number_of_steps: Number of steps to divide the range into.
 
-        :param start: Starting value of the threshold range.
-        :param end: Ending value of the threshold range.
-        :param number_of_steps: Number of steps to divide the range into.
-        :return: NumPy array containing the generated thresholds.
+        Returns:
+             NumPy array containing the generated thresholds.
         """
 
         step = end / number_of_steps
         return np.arange(start=start, stop=end, step=step)
 
     def plot_rec_images(self, test_img: np.ndarray, rec_img: np.ndarray, mask: np.ndarray, vis_img: np.ndarray,
-                        idx: int) -> None:
+                        idx: int, ssim_threshold: float) -> None:
         """
         Plot and save a grid of images including the test image, reconstructed image, mask, and visualized image.
 
-        :param test_img: The original test image (BGR format).
-        :param rec_img: The reconstructed image (BGR format).
-        :param mask: The mask image (grayscale).
-        :param vis_img: The visualized image (BGR format).
-        :param idx: Index for naming the saved file.
-        :return: None
+        Args:
+            test_img: The original test image (BGR format).
+            rec_img: The reconstructed image (BGR format).
+            mask: The mask image (grayscale).
+            vis_img: The visualized image (BGR format).
+            idx: Index for naming the saved file.
+            ssim_threshold:
+
+        Returns:
+             None
         """
 
-        filename = os.path.join(self.save_reconstruction_plot_dir, f"{idx}_reconstruction.png")
+        filename = os.path.join(self.save_reconstruction_plot_dir, f"{ssim_threshold}_{idx}_reconstruction.png")
 
         test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
         vis_img = cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB)
 
         plt.subplot(2, 2, 1)
-        plt.imshow(test_img)
+        plt.imshow(test_img, cmap='gray')
         plt.title('test_img')
 
         plt.subplot(2, 2, 2)
-        plt.imshow(rec_img)
+        plt.imshow(rec_img, cmap='gray')
         plt.title('rec_img')
 
         plt.subplot(2, 2, 3)
@@ -207,6 +220,7 @@ class TestAutoEncoder:
 
         plt.subplot(2, 2, 4)
         plt.imshow(vis_img, cmap='gray')
+        plt.tight_layout()
         plt.title('vis_img')
 
         plt.savefig(filename)
@@ -218,9 +232,12 @@ class TestAutoEncoder:
         """
         Plot the average ROC curve.
 
-        :param all_fpr: List of false positive rates.
-        :param all_tpr: List of true positive rates.
-        :return: None
+        Args:
+            all_fpr: List of false positive rates.
+            all_tpr: List of true positive rates.
+
+        Returns:
+             None
         """
 
         filename = os.path.join(self.save_roc_plot_dir, "roc.png")
@@ -243,15 +260,36 @@ class TestAutoEncoder:
         plt.ylabel('True Positive Rate (TPR)')
         plt.title('Receiver Operating Characteristic (ROC) Curve')
         plt.legend()
-        plt.savefig(filename)
+        plt.savefig(filename, dpi=300)
         plt.close()
 
-    def get_results(self, ssim_threshold: float) -> tuple[float, float]:
+    def ground_truth_caching(self) -> dict:
+        """
+
+        Returns:
+
+        """
+
+        gt_images_cache = {}
+        for gt_img in self.gt_images:
+            gt = cv2.imread(gt_img, 0)
+            gt = cv2.resize(gt, self.test_cfg.get("img_size"))
+            gt = cv2.threshold(gt, 128, 255, cv2.THRESH_BINARY)[1]
+            gt = gt.ravel()
+            gt = np.where(gt == 255, 1, 0)
+            gt_images_cache[gt_img] = gt.ravel()
+
+        return gt_images_cache
+
+    def get_results(self, ssim_threshold: float):
         """
         Calculate average False Positive Rate (FPR) and True Positive Rate (TPR) for a given SSIM threshold.
 
-        :param ssim_threshold: SSIM threshold for generating binary masks.
-        :return: Tuple containing average FPR and TPR.
+        Args:
+            ssim_threshold: SSIM threshold for generating binary masks.
+
+        Returns:
+
         """
 
         all_fpr = []
@@ -273,11 +311,7 @@ class TestAutoEncoder:
             mask = np.uint8(mask.ravel())
             mask = np.where(mask == 255, 1, 0)
 
-            gt = cv2.imread(gt_img, 0)
-            gt = cv2.resize(gt, self.test_cfg.get("img_size"))
-            gt = cv2.threshold(gt, 128, 255, cv2.THRESH_BINARY)[1]
-            gt = gt.ravel()
-            gt = np.where(gt == 255, 1, 0)
+            gt = self.cached_gt_images.get(gt_img)
 
             conf_mtx = confusion_matrix(gt, mask)
 
@@ -298,7 +332,7 @@ class TestAutoEncoder:
 
             if self.test_cfg.get("vis_results"):
                 vis_img = set_img_color(test_img.copy(), mask_copy, weight_foreground=0.3)
-                self.plot_rec_images(test_img, rec_img, mask_copy, vis_img, idx)
+                self.plot_rec_images(test_img, rec_img, mask_copy, vis_img, idx, ssim_threshold)
 
         return avg_of_list(all_fpr), avg_of_list(all_tpr)
 
@@ -306,10 +340,18 @@ class TestAutoEncoder:
         """
         Main method for executing the ROC analysis.
 
-        :return: None
+        Returns:
+             None
         """
 
-        threshold_range = self.threshold_calculator(start=0.01, end=1.01, number_of_steps=101)
+        threshold_range = (
+            self.threshold_calculator(
+                start=self.test_cfg.get("threshold_init"),
+                end=self.test_cfg.get("threshold_end"),
+                number_of_steps=self.test_cfg.get("num_of_steps")
+            )
+        )
+
         fpr_list, tpr_list = [], []
 
         for ssim_tresh in tqdm(threshold_range):

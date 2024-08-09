@@ -218,6 +218,7 @@ def set_img_color(img: np.ndarray, predict_mask: np.ndarray, weight_foreground: 
     :return: Modified image as a NumPy array.
     """
 
+    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     origin = img
     img[np.where(predict_mask == 255)] = (0, 0, 255)
     cv2.addWeighted(img, weight_foreground, origin, (1 - weight_foreground), 0, img)
@@ -346,23 +347,27 @@ def visualize_images(
         noise_images_grid = torchvision.utils.make_grid(noise_images.cpu(), nrow=8, normalize=True)
     outputs_grid = torchvision.utils.make_grid(outputs.cpu(), nrow=8, normalize=True)
 
-    plt.figure(figsize=(12, 12))
+    plt.figure(figsize=(15, 5))  # Adjust the figsize to fit horizontally
 
-    num_of_rows = 3 if noise_images is not None else 2
+    num_of_plots = 2 if noise_images is None else 3
 
-    plt.subplot(num_of_rows, 1, 1)
+    plt.subplot(1, num_of_plots, 1)
     plt.imshow(clean_images_grid.permute(1, 2, 0))
     plt.title(f'Clean Images - Epoch {epoch}, Batch {batch_idx}')
+    plt.axis('off')  # Optional: hide the axes for better visualization
 
     if noise_images is not None:
-        plt.subplot(num_of_rows, 1, 2)
+        plt.subplot(1, num_of_plots, 2)
         plt.imshow(noise_images_grid.permute(1, 2, 0))
         plt.title(f'Noisy Images - Epoch {epoch}, Batch {batch_idx}')
+        plt.axis('off')  # Optional: hide the axes for better visualization
 
-    plt.subplot(num_of_rows, 1, num_of_rows)
+    plt.subplot(1, num_of_plots, num_of_plots)
     plt.imshow(outputs_grid.permute(1, 2, 0))
     plt.title(f'Reconstructed Images - Epoch {epoch}, Batch {batch_idx}')
+    plt.axis('off')  # Optional: hide the axes for better visualization
 
+    plt.tight_layout()  # Adjust layout to prevent overlap
     plt.savefig(filename)
     plt.close()
     gc.collect()

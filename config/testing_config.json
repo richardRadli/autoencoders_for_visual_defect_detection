@@ -1,9 +1,12 @@
 {
-  "network_type": "AE",
+  "network_type": "AEE",
   "dataset_type": "texture_1",
   "vis_results": true,
   "img_size": [256, 256],
   "crop_size": [128, 128],
   "stride": 32,
-  "device": "cuda"
+  "device": "cuda",
+  "threshold_init": 0.01,
+  "threshold_end": 1.01,
+  "num_of_steps": 100
 }

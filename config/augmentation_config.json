@@ -10,5 +10,6 @@
   "p_crop": 1,
   "p_horizontal_flip": 0.3,
   "p_vertical_flip": 0.3,
-  "size_of_cover": 20
+  "size_of_cover": 20,
+  "num_workers": 6
 }

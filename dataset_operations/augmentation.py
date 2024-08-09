@@ -16,9 +16,12 @@ def generate_image_list(train_data_dir: str, augment_num: int) -> List[Tuple[str
     """
     Generate a list of image filenames with corresponding augmentation counts.
 
-    :param train_data_dir: The directory containing the training images.
-    :param augment_num: The total number of augmentations to be performed.
-    :return: A list of tuples, each containing a filename and its corresponding augmentation count.
+    Args:
+        train_data_dir: The directory containing the training images.
+        augment_num: The total number of augmentations to be performed.
+
+    Returns:
+         A list of tuples, each containing a filename and its corresponding augmentation count.
     """
 
     filenames = os.listdir(train_data_dir)
@@ -40,9 +43,12 @@ def random_crop(image: np.ndarray, new_size: Tuple[int, int]) -> np.ndarray:
     """
     Perform a random crop on the input image.
 
-    :param image: The input image as a NumPy array.
-    :param new_size: A tuple representing the new size (height, width) of the cropped image.
-    :return: The cropped image.
+    Args:
+        image: The input image as a NumPy array.
+        new_size: A tuple representing the new size (height, width) of the cropped image.
+
+    Returns:
+         The cropped image.
     """
 
     h, w = image.shape[:2]
@@ -56,10 +62,13 @@ def rotate_image(img: np.ndarray, angle: float, crop: bool) -> np.ndarray:
     """
     Rotate the input image by the specified angle.
 
-    :param img: The input image as a NumPy array.
-    :param angle: The angle (in degrees) by which to rotate the image.
-    :param crop: A boolean indicating whether to crop the image after rotation.
-    :return: The rotated image.
+    Args:
+        img: The input image as a NumPy array.
+        angle: The angle (in degrees) by which to rotate the image.
+        crop: A boolean indicating whether to crop the image after rotation.
+
+    Returns:
+         The rotated image.
     """
 
     h, w = img.shape[:2]
@@ -89,10 +98,13 @@ def random_rotate(img: np.ndarray, angle_vari: float, p_crop: float) -> np.ndarr
     """
     Rotate the input image by a random angle within the specified range.
 
-    :param img: The input image as a NumPy array.
-    :param angle_vari: The range of variation for the random rotation angle.
-    :param p_crop: The probability of cropping the image after rotation.
-    :return: The randomly rotated image.
+    Args:
+        img: The input image as a NumPy array.
+        angle_vari: The range of variation for the random rotation angle.
+        p_crop: The probability of cropping the image after rotation.
+
+    Returns:
+         The randomly rotated image.
     """
 
     angle = np.random.uniform(-angle_vari, angle_vari)
@@ -104,10 +116,13 @@ def augment_images(filelist: List[Tuple[str, int]], aug_out_dir: str, cfg) -> No
     """
     Augment a list of images and save the augmented images to the specified directory.
 
-    :param filelist: A list of tuples, each containing a filepath and its corresponding augmentation count.
-    :param aug_out_dir: The directory to save the augmented images.
-    :param cfg: An object containing configuration parameters for image augmentation.
-    :return: None
+    Args:
+        filelist: A list of tuples, each containing a filepath and its corresponding augmentation count.
+        aug_out_dir: The directory to save the augmented images.
+        cfg: An object containing configuration parameters for image augmentation.
+
+    Returns:
+        None
     """
 
     for filepath, n in tqdm(filelist, total=len(filelist), desc='Augmenting images'):
@@ -154,7 +169,7 @@ def main() -> None:
     """
     Main function for data augmentation.
 
-    Return:
+    Returns:
          None
     """
 
