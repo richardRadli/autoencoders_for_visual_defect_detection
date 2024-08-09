@@ -44,13 +44,13 @@
       "enum": ["cuda", "cpu"]
     },
     "threshold_init": {
-      "type": "integer"
+      "type": "number"
     },
     "threshold_end": {
-      "type": "integer"
+      "type": "number"
     },
     "num_of_steps": {
-      "type": "number"
+      "type": "integer"
     }
   },
   "required": [

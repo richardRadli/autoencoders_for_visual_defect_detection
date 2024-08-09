@@ -1,6 +1,5 @@
-import gc
-
 import cv2
+import gc
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,6 +9,7 @@ import torch
 from skimage import morphology
 from skimage.metrics import structural_similarity as ssim
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
 
 from config.data_paths import JSON_FILES_PATHS
@@ -18,7 +18,7 @@ from config.dataset_config import dataset_data_path_selector, dataset_images_pat
 from models.network_selector import NetworkFactory
 from utils.utils import (setup_logger, device_selector, get_patch, patch2img, set_img_color, avg_of_list,
                          find_latest_file_in_latest_directory, create_save_dirs, create_timestamp, load_config_json,
-                         file_reader)
+                         file_reader, save_list_to_json)
 
 
 class TestAutoEncoder:
@@ -40,50 +40,69 @@ class TestAutoEncoder:
             )
         )
 
-        network_type = self.test_cfg.get("network_type")
-        network_cfg = network_configs(train_cfg).get(network_type)
-        dataset_type = self.test_cfg.get("dataset_type")
+        self.network_type = self.test_cfg.get("network_type")
+        network_cfg = network_configs(train_cfg).get(self.network_type)
+        self.dataset_type = self.test_cfg.get("dataset_type")
 
         self.mask_size = self.test_cfg.get("patch_size") \
             if self.test_cfg.get("img_size")[0] - self.test_cfg.get("crop_size")[0] < self.test_cfg.get("stride") \
             else self.test_cfg.get("img_size")[0]
 
+        train_dataset_path = (
+            dataset_images_path_selector().get(self.dataset_type).get("train")
+        )
+        self.train_images = (
+            file_reader(train_dataset_path, "png")
+        )
+
         test_dataset_path = (
-            dataset_images_path_selector().get(dataset_type).get("test")
+            dataset_images_path_selector().get(self.dataset_type).get("test")
         )
         self.test_images = (
             file_reader(test_dataset_path, "png")
         )
 
         gt_dataset_path = (
-            dataset_images_path_selector().get(dataset_type).get("gt")
+            dataset_images_path_selector().get(self.dataset_type).get("gt")
         )
         self.gt_images = (
             file_reader(gt_dataset_path, "png")
         )
 
-        self.cached_gt_images = self.ground_truth_caching()
-
-        roc_dir = (
-            dataset_data_path_selector().get(dataset_type).get("roc_plot")
+        self.cached_gt_images = (
+            self.ground_truth_caching()
         )
 
+        roc_dir = (
+            dataset_data_path_selector().get(self.dataset_type).get("roc_plot")
+        )
         self.save_roc_plot_dir = (
             create_save_dirs(
                 directory_path=roc_dir,
-                network_type=network_type,
+                network_type=self.network_type,
                 timestamp=timestamp
             )
         )
 
-        rec_dir = (
-            dataset_data_path_selector().get(dataset_type).get("reconstruction_images")
-        )
+        if self.test_cfg.get("vis_results"):
+            rec_dir = (
+                dataset_data_path_selector().get(self.dataset_type).get("reconstruction_images")
+            )
+            self.save_reconstruction_plot_dir = (
+                create_save_dirs(
+                    directory_path=rec_dir,
+                    network_type=self.network_type,
+                    timestamp=timestamp
+                )
+            )
 
-        self.save_reconstruction_plot_dir = (
+        metrics_dir = (
+            dataset_data_path_selector().get(self.dataset_type).get("metrics")
+        )
+        self.metrics_save_dir = (
             create_save_dirs(
-                directory_path=rec_dir,
-                network_type=network_type,
+                directory_path=metrics_dir,
+                network_type=self.network_type,
                 timestamp=timestamp
             )
         )
@@ -94,15 +113,15 @@ class TestAutoEncoder:
 
         self.model = (
             NetworkFactory.create_network(
-                network_type=network_type,
+                network_type=self.network_type,
                 network_cfg=network_cfg)
         ).to(self.device)
 
         state_dict = torch.load(
             find_latest_file_in_latest_directory(
                 path=str(os.path.join(
-                    dataset_data_path_selector().get(dataset_type).get("model_weights_dir"),
-                    network_type)
+                    dataset_data_path_selector().get(self.dataset_type).get("model_weights_dir"),
+                    self.network_type)
                 )
             )
         )
@@ -228,7 +247,7 @@ class TestAutoEncoder:
 
         gc.collect()
 
-    def plot_average_roc(self, all_fpr: list, all_tpr: list) -> None:
+    def plot_average_roc(self, all_fpr: list, all_tpr: list) -> float:
         """
         Plot the average ROC curve.
 
@@ -237,10 +256,10 @@ class TestAutoEncoder:
             all_tpr: List of true positive rates.
 
         Returns:
-             None
+             auc_roc
         """
 
-        filename = os.path.join(self.save_roc_plot_dir, "roc.png")
+        filename = os.path.join(self.save_roc_plot_dir, f"{self.network_type}_{self.dataset_type}roc.png")
 
         tpr_array = np.array(all_tpr)
         fpr_array = np.array(all_fpr)
@@ -251,7 +270,7 @@ class TestAutoEncoder:
 
         auc_roc = np.trapz(sorted_tpr, sorted_fpr)
 
-        logging.info(f"{auc_roc:.4f}")
+        logging.info(f"ROC AUC: {auc_roc:.4f}")
 
         plt.plot(sorted_fpr, sorted_tpr, label=f'ROC Curve (AUC = {auc_roc:.4f})')
         plt.scatter(sorted_fpr, sorted_tpr, c='blue', marker='.')
@@ -262,6 +281,8 @@ class TestAutoEncoder:
         plt.legend()
         plt.savefig(filename, dpi=300)
         plt.close()
+
+        return auc_roc
 
     def ground_truth_caching(self) -> dict:
         """
@@ -336,6 +357,29 @@ class TestAutoEncoder:
 
         return avg_of_list(all_fpr), avg_of_list(all_tpr)
 
+    def calculate_ssim_mse(self):
+        ssim_list = []
+        mse_list = []
+
+        for idx, train_img in tqdm(
+                enumerate(self.train_images),
+                total=len(self.train_images),
+                desc='Calculating SSIM and MSE'
+        ):
+            train_img, rec_img, _ = self.get_residual_map(train_img)
+            ssim_res = ssim(train_img, rec_img, win_size=11, full=True)[0]
+            ssim_list.append(ssim_res)
+            mse_res = mean_squared_error(train_img, rec_img)
+            mse_list.append(mse_res)
+
+        avg_ssim = avg_of_list(ssim_list)
+        mse_avg = avg_of_list(mse_list)
+
+        logging.info(f"SSIM: {avg_ssim:.4f}")
+        logging.info(f"MSE: {mse_avg:.4f}")
+
+        return avg_ssim, mse_avg
+
     def main(self) -> None:
         """
         Main method for executing the ROC analysis.
@@ -354,11 +398,28 @@ class TestAutoEncoder:
 
         fpr_list, tpr_list = [], []
 
-        for ssim_tresh in tqdm(threshold_range):
+        for ssim_tresh in tqdm(
+                threshold_range,
+                total=len(threshold_range),
+                desc='Calculating FPR and TPR'
+        ):
             fpr, tpr = self.get_results(ssim_tresh)
             fpr_list.append(fpr)
             tpr_list.append(tpr)
-        self.plot_average_roc(fpr_list, tpr_list)
+
+        filename = os.path.join(self.metrics_save_dir, 'fpr_tpr_ssim_mse_roc_auc_results.json')
+        avg_ssim, mse_avg = self.calculate_ssim_mse()
+        auc_roc = self.plot_average_roc(fpr_list, tpr_list)
+
+        results = {
+            "fpr_tpr": fpr_list,
+            "tpr_tpr": tpr_list,
+            "avg_ssim": avg_ssim,
+            "mse_avg": mse_avg,
+            "auc_roc": auc_roc,
+        }
+
+        save_list_to_json(filename=filename, results_dict=results)
 
 
 if __name__ == '__main__':

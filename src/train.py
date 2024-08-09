@@ -350,6 +350,7 @@ class TrainAutoEncoder:
                                 f"current valid loss is {valid_loss:.5f}")
 
                 early_stopping_counter += 1
+                logging.warning(f"Early stopping counter: {early_stopping_counter}")
 
                 if early_stopping_counter >= self.train_cfg.get("early_stopping"):
                     logging.info(f"Early stopping at epoch {epoch}")

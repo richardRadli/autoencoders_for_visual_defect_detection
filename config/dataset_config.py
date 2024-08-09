@@ -13,8 +13,9 @@ def dataset_data_path_selector():
             "roc_plot":
                 IMAGES_PATH.get_data_path("texture_1_roc_plot"),
             "reconstruction_images":
-                IMAGES_PATH.get_data_path("texture_1_reconstruction_vis")
-
+                IMAGES_PATH.get_data_path("texture_1_reconstruction_vis"),
+            "metrics":
+                DATA_PATH.get_data_path("texture_1_metrics")
         },
         "texture_2": {
             "model_weights_dir":
@@ -26,7 +27,9 @@ def dataset_data_path_selector():
             "roc_plot":
                 IMAGES_PATH.get_data_path("texture_2_roc_plot"),
             "reconstruction_images":
-                IMAGES_PATH.get_data_path("texture_2_reconstruction_vis")
+                IMAGES_PATH.get_data_path("texture_2_reconstruction_vis"),
+            "metrics":
+                DATA_PATH.get_data_path("texture_2_metrics")
         }
     }
 

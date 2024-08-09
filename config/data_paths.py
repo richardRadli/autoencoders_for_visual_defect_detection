@@ -88,11 +88,15 @@ class Data(_Const):
             "data/texture_1/model_weights",
         "texture_1_log_dir":
             "data/texture_1/model_logs",
+        "texture_1_metrics":
+            "data/texture_1/metrics",
 
         "texture_2_model_weights_dir":
             "data/texture_2/model_weights",
         "texture_2_log_dir":
-            "data/texture_2/model_logs"
+            "data/texture_2/model_logs",
+        "texture_2_metrics":
+            "data/texture_2/metrics"
     }
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -111,7 +115,6 @@ class Data(_Const):
 
 class Datasets(_Const):
     dirs_dataset = {
-        # B O T T L E
         "texture_1_train":
             "texture_1/train/good",
 
@@ -128,7 +131,6 @@ class Datasets(_Const):
             "texture_1/ground_truth/defective",
 
 
-        # C A B L E
         "texture_2_train":
             "texture_2/train/good",
 

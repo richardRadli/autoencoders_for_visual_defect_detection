@@ -22,10 +22,6 @@ from pytorch_msssim import SSIM
 from typing import Any, Callable, Optional, List, Union
 
 
-
-# ----------------------------------------------------------------------------------------------------------------------
-# ----------------------------------------------- S E T U P   L O G G E R ----------------------------------------------
-# ----------------------------------------------------------------------------------------------------------------------
 def setup_logger():
     """
     Set up a colorized logger with the following log levels and colors:
@@ -104,14 +100,11 @@ def device_selector(preferred_device: str) -> torch.device:
         return torch.device("cpu")
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-# ------------------------------------------- C R E A T E   T I M E S T A M P ------------------------------------------
-# ----------------------------------------------------------------------------------------------------------------------
 def create_timestamp() -> str:
     """
     Creates a timestamp in the format of '%Y-%m-%d_%H-%M-%S', representing the current date and time.
 
-    :return: The timestamp string.
+    Returns: The timestamp string.
     """
 
     return datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -121,10 +114,10 @@ def get_patch(image: np.ndarray, new_size: int, stride: int) -> np.ndarray:
     """
     Extract square patches from an image with a specified size and stride.
 
-    :param image: The input image as a NumPy array.
-    :param new_size: The size of the patches to extract.
-    :param stride: The stride between consecutive patches.
-    :return: An array containing extracted patches.
+        image: The input image as a NumPy array.
+        new_size: The size of the patches to extract.
+        stride: The stride between consecutive patches.
+    Returns: An array containing extracted patches.
     """
 
     h, w = image.shape[:2]
@@ -143,11 +136,11 @@ def patch2img(patches, im_size: int, patch_size: int, stride: int) -> np.ndarray
     """
     Reconstruct an image from patches with a specified size and stride.
 
-    :param patches: Patches to reconstruct, assumed to be a NumPy array or PyTorch tensor.
-    :param im_size: Size of the reconstructed image.
-    :param patch_size: Size of the square patches used during extraction.
-    :param stride: The stride between consecutive patches during extraction.
-    :return: Reconstructed image.
+        patches: Patches to reconstruct, assumed to be a NumPy array or PyTorch tensor.
+        im_size: Size of the reconstructed image.
+        patch_size: Size of the square patches used during extraction.
+        stride: The stride between consecutive patches during extraction.
+    Returns: Reconstructed image.
     """
 
     patches = patches.detach().cpu().numpy()
@@ -168,54 +161,14 @@ def patch2img(patches, im_size: int, patch_size: int, stride: int) -> np.ndarray
     return img
 
 
-def fill_hole(mask: np.ndarray):
-    """
-    Fill holes in a binary mask by drawing contours and summing them.
-
-    :param mask: Input binary mask.
-    :return: Binary mask with filled holes.
-    """
-
-    contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    len_contour = len(contours)
-    contour_list = []
-    for i in range(len_contour):
-        drawing = np.zeros_like(mask, np.uint8)  # create a black image
-        img_contour = cv2.drawContours(drawing, contours, i, (255, 255, 255), -1)
-        contour_list.append(img_contour)
-
-    out = sum(contour_list)
-    return out
-
-
-def bg_mask(img: np.ndarray, value: int, mode: int) -> np.ndarray:
-    """
-    Create a binary mask based on image intensity.
-
-    :param img: Input image as a NumPy array.
-    :param value: Intensity threshold value.
-    :param mode: Thresholding mode (cv2.THRESH_BINARY or cv2.THRESH_BINARY_INV).
-    :return: Binary mask as a NumPy array.
-    """
-
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(img, value, 255, mode)
-    thresh = fill_hole(thresh)
-    if type(thresh) is int:
-        return np.ones(img.shape)
-    mask_ = np.ones(thresh.shape)
-    mask_[np.where(thresh <= 127)] = 0
-    return mask_
-
-
 def set_img_color(img: np.ndarray, predict_mask: np.ndarray, weight_foreground: float) -> np.ndarray:
     """
     Modify image colors based on a predicted mask.
 
-    :param img: Input image as a NumPy array.
-    :param predict_mask: Predicted mask as a binary NumPy array.
-    :param weight_foreground: Weight for blending the modified image with the original.
-    :return: Modified image as a NumPy array.
+        img: Input image as a NumPy array.
+        predict_mask: Predicted mask as a binary NumPy array.
+        weight_foreground: Weight for blending the modified image with the original.
+    Returns: Modified image as a NumPy array.
     """
 
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
@@ -257,15 +210,12 @@ def file_reader(file_path: str, extension: str) -> List[str]:
     return sorted([str(file) for file in Path(file_path).glob(f'*.{extension}')], key=numerical_sort)
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-# ----------------------- F I N D   L A T E S T   F I L E   I N   L A T E S T   D I R E C T O R Y ----------------------
-# ----------------------------------------------------------------------------------------------------------------------
 def find_latest_file_in_latest_directory(path: str) -> str:
     """
     Finds the latest file in the latest directory within the given path.
 
-    :param path: str, the path to the directory where we should look for the latest file
-    :return: str, the path to the latest file
+        path: str, the path to the directory where we should look for the latest file
+    Returns: str, the path to the latest file
     :raise: when no directories or files found
     """
 
@@ -330,13 +280,13 @@ def visualize_images(
     """
     Visualize and save images for inspection.
 
-    :param clean_images: Tensor containing clean images.
-    :param outputs: Tensor containing reconstructed images.
-    :param epoch: Current epoch number.
-    :param batch_idx: Current batch index.
-    :param dir_path: Directory path to save the visualization.
-    :param noise_images: Optional tensor containing noisy images.
-    :return: None
+        clean_images: Tensor containing clean images.
+        outputs: Tensor containing reconstructed images.
+        epoch: Current epoch number.
+        batch_idx: Current batch index.
+        dir_path: Directory path to save the visualization.
+        noise_images: Optional tensor containing noisy images.
+    Returns: None
     """
 
     filename = os.path.join(dir_path, f"{epoch}_{batch_idx}.png")
@@ -373,15 +323,15 @@ def visualize_images(
     gc.collect()
 
 
-# ------------------------------------------------------------------------------------------------------------------
-# --------------------------------------- G E T   L O S S   F U N C T I O N ----------------------------------------
-# ------------------------------------------------------------------------------------------------------------------
 def get_loss_function(loss_function_type: str):
     """
     Get the loss function based on the provided loss function type.
 
-    :param loss_function_type: String specifying the type of loss function ("mse" or "ssim").
-    :return: Loss function instance.
+    Args:
+        loss_function_type: String specifying the type of loss function ("mse" or "ssim").
+
+    Returns:
+         Loss function instance.
     """
 
     loss_functions = {
@@ -395,17 +345,17 @@ def get_loss_function(loss_function_type: str):
         raise ValueError(f"Wrong loss function type {loss_function_type}")
 
 
-# ------------------------------------------------------------------------------------------------------------------
-# ---------------------------------------- C R E A T E   S A V E   D I R S -----------------------------------------
-# ------------------------------------------------------------------------------------------------------------------
 def create_save_dirs(directory_path: str, network_type: str, timestamp: str) -> str:
     """
     Create and return a directory path based on input parameters.
 
-    :param directory_path: Base directory path where the new directory will be created.
-    :param network_type: String specifying the type of network.
-    :param timestamp: String timestamp for uniqueness.
-    :return: Created directory path.
+    Args:
+        directory_path: Base directory path where the new directory will be created.
+        network_type: String specifying the type of network.
+        timestamp: String timestamp for uniqueness.
+
+    Returns:
+         Created directory path.
     """
 
     directory_to_create = (
@@ -419,8 +369,11 @@ def avg_of_list(my_list):
     """
     Calculate and return the average value of the elements in the input list.
 
-    :param my_list: List of numerical values.
-    :return: Average value of the elements in the list.
+    Args:
+        my_list: List of numerical values.
+
+    Returns:
+        Average value of the elements in the list.
     """
 
     return sum(my_list) / len(my_list)
@@ -428,10 +381,12 @@ def avg_of_list(my_list):
 
 def load_config_json(json_schema_filename: str, json_filename: str):
     """
+    Args:
+        json_schema_filename:
+        json_filename:
 
-    :param json_schema_filename:
-    :param json_filename:
-    :return:
+    Returns:
+
     """
 
     with open(json_schema_filename, "r") as schema_file:
@@ -446,3 +401,18 @@ def load_config_json(json_schema_filename: str, json_filename: str):
         return config
     except jsonschema.exceptions.ValidationError as err:
         logging.error(f"JSON data is invalid: {err}")
+
+
+def save_list_to_json(filename: str, results_dict: dict) -> None:
+    """
+    Save metrics to a json file.
+
+    Args:
+        filename: Path to the json file where the lists will be saved.
+        results_dict:
+    Returns:
+        None
+    """
+    
+    with open(filename, "w") as json_file:
+        json.dump(results_dict, json_file, indent=4)
