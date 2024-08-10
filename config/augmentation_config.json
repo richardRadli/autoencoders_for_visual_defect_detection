@@ -3,7 +3,7 @@
   "dataset_type": "texture_1",
   "img_size": [256, 256],
   "crop_size": [128, 128],
-  "augment_num": 10000,
+  "augment_num": 12500,
   "p_rotate": 0.3,
   "rotate_angle_vari": 45.0,
   "p_rotate_crop": 1.0,

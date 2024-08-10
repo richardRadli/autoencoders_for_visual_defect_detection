@@ -1,6 +1,6 @@
 {
   "validation_split": 0.2,
-  "dataset_type": "texture_2",
+  "dataset_type": "texture_1",
   "network_type": "AE",
   "epochs": 200,
   "batch_size": 128,
