@@ -1,3 +1,9 @@
+![Python](https://img.shields.io/badge/python-v3.11-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![PyTorch](https://img.shields.io/badge/PyTorch-v2.2.1-%23EE4C2C.svg?style=for-the-badge&logo=PyTorch&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit-v1.4.0--learn-%23F7931E.svg?style=for-the-badge&logo=scikit-learn&logoColor=white)
+![NumPy](https://img.shields.io/badge/numpy-v1.26-%23013243.svg?style=for-the-badge&logo=numpy&logoColor=white)
+![OpenCV](https://img.shields.io/badge/opencv-v4.9-%23white.svg?style=for-the-badge&logo=opencv&logoColor=white)
+
 # About the Application of Autoencoders for Visual Defect Detection
 
 Visual defect detection is a key technology in modern industrial manufacturing systems. There are many possible
@@ -26,9 +32,9 @@ colorthief==0.2.1
 kornia~=0.7.3
 matplotlib~=3.8.1
 numpy~=1.26.4
-opencv-python~=4.9.0.80
+opencv-python~=4.9.0
 pandas~=2.1.0
-sklearn==0.0.post1
+sklearn==1.4.0
 torch~=2.2.1+cu121
 torchvision~=0.17.1+cu121
 tqdm~=4.66.2

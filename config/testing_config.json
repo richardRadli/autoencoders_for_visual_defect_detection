@@ -1,5 +1,5 @@
 {
-  "network_type": "AE",
+  "network_type": "DAEE",
   "dataset_type": "texture_1",
   "subtest_folder": "defective",
   "vis_results": false,
