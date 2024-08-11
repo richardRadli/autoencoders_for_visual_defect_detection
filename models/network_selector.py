@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from models.base_model import AutoEncoder
+from models.base_model import BaseAutoEncoder
 from models.extended_model import ExtendedAutoEncoder
 
 
@@ -16,7 +16,7 @@ class BaseNetwork(ABC):
 
 class BaseModelWrapper(BaseNetwork):
     def __init__(self, network_cfg):
-        self.model = AutoEncoder(network_cfg)
+        self.model = BaseAutoEncoder(network_cfg)
 
     def forward(self, x):
         return self.model(x)
