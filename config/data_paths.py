@@ -65,7 +65,14 @@ class Images(_Const):
         "texture_2_roc_plot":
             "images/texture_2/roc_plot",
         "texture_2_reconstruction_vis":
-            "images/texture_2/reconstruction_vis"
+            "images/texture_2/reconstruction_vis",
+
+        "cpu_training_vis":
+            "images/cpu/training_vis",
+        "cpu_roc_plot":
+            "images/cpu/roc_plot",
+        "cpu_reconstruction_vis":
+            "images/cpu/reconstruction_vis"
     }
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -96,7 +103,14 @@ class Data(_Const):
         "texture_2_log_dir":
             "data/texture_2/model_logs",
         "texture_2_metrics":
-            "data/texture_2/metrics"
+            "data/texture_2/metrics",
+
+        "cpu_model_weights_dir":
+            "data/cpu/model_weights",
+        "cpu_log_dir":
+            "data/cpu/model_logs",
+        "cpu_metrics":
+            "data/cpu/metrics",
     }
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -124,12 +138,11 @@ class Datasets(_Const):
         "texture_1_noise":
             "texture_1/noise",
 
-        "texture_1_test_defective":
-            "texture_1/test/defective",
+        "texture_1_test_defective_test_images":
+            "texture_1/test/defective/test_images",
 
-        "texture_1_gt_defective":
-            "texture_1/ground_truth/defective",
-
+        "texture_1_test_defective_ground_truth":
+            "texture_1/test/defective/ground_truth",
 
         "texture_2_train":
             "texture_2/train/good",
@@ -140,11 +153,38 @@ class Datasets(_Const):
         "texture_2_noise":
             "texture_2/noise",
 
-        "texture_2_test_defective":
-            "texture_2/test/defective",
+        "texture_2_test_defective_test_images":
+            "texture_2/test/defective/test_images",
 
-        "texture_2_gt_defective":
-            "texture_2/ground_truth/defective",
+        "texture_2_test_defective_ground_truth":
+            "texture_2/test/defective/ground_truth",
+
+        "cpu_train":
+            "cpu/train/good",
+
+        "cpu_aug":
+            "cpu/aug",
+
+        "cpu_noise":
+            "cpu/noise",
+
+        "cpu_test_cpua_test_images":
+            "cpu/test/cpua/test_images",
+
+        "cpu_test_cpua_ground_truth":
+            "cpu/test/cpua/ground_truth",
+
+        "cpu_test_cpuc_test_images":
+            "cpu/test/cpuc/test_images",
+
+        "cpu_test_cpuc_ground_truth":
+            "cpu/test/cpuc/ground_truth",
+
+        "cpu_test_cpum_test_images":
+            "cpu/test/cpum/test_images",
+
+        "cpu_test_cpum_ground_truth":
+            "cpu/test/cpum/ground_truth",
     }
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -190,8 +230,8 @@ class ConfigFilePaths(_Const):
     # ------------------------------------------------------------------------------------------------------------------
     def get_data_path(self, key):
         return os.path.join(self.PROJECT_ROOT, self.dirs_config_paths.get(key, ""))
-    
-    
+
+
 CONST: _Const = _Const()
 JSON_FILES_PATHS: ConfigFilePaths = ConfigFilePaths()
 IMAGES_PATH: Images = Images()

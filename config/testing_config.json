@@ -1,7 +1,9 @@
 {
-  "network_type": "DAE",
-  "dataset_type": "texture_2",
+  "network_type": "AE",
+  "dataset_type": "texture_1",
+  "subtest_folder": "defective",
   "vis_results": false,
+  "grayscale": true,
   "img_size": [256, 256],
   "crop_size": [128, 128],
   "stride": 32,

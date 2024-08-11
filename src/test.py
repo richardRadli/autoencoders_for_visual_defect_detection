@@ -43,11 +43,14 @@ class TestAutoEncoder:
         self.network_type = self.test_cfg.get("network_type")
         network_cfg = network_configs(train_cfg).get(self.network_type)
         self.dataset_type = self.test_cfg.get("dataset_type")
+        subtest_folder = self.test_cfg.get("subtest_folder")
+        self.grayscale = self.test_cfg.get("grayscale")
 
         self.mask_size = self.test_cfg.get("patch_size") \
             if self.test_cfg.get("img_size")[0] - self.test_cfg.get("crop_size")[0] < self.test_cfg.get("stride") \
             else self.test_cfg.get("img_size")[0]
 
+        # Load paths
         train_dataset_path = (
             dataset_images_path_selector().get(self.dataset_type).get("train")
         )
@@ -55,18 +58,21 @@ class TestAutoEncoder:
             file_reader(train_dataset_path, "png")
         )
 
-        test_dataset_path = (
-            dataset_images_path_selector().get(self.dataset_type).get("test")
+        test_path = (
+            dataset_images_path_selector().get(self.dataset_type).get("test").get(subtest_folder)
+        )
+        test_images_path = (
+            test_path.get("test_images")
         )
         self.test_images = (
-            file_reader(test_dataset_path, "png")
+            file_reader(test_images_path, "png")
         )
 
-        gt_dataset_path = (
-            dataset_images_path_selector().get(self.dataset_type).get("gt")
+        gt_images_path = (
+            test_path.get("ground_truth")
         )
         self.gt_images = (
-            file_reader(gt_dataset_path, "png")
+            file_reader(gt_images_path, "png")
         )
 
         self.cached_gt_images = (
@@ -107,11 +113,25 @@ class TestAutoEncoder:
             )
         )
 
+        # Select device to use
         self.device = (
             device_selector(self.test_cfg.get("device"))
         )
 
-        self.model = (
+        self.model = self.load_model(network_cfg)
+
+    def load_model(self, network_cfg):
+        """
+
+        Args:
+            network_cfg:
+
+        Returns:
+
+        """
+
+        # Load the model and the latest weights
+        model = (
             NetworkFactory.create_network(
                 network_type=self.network_type,
                 network_cfg=network_cfg)
@@ -126,8 +146,10 @@ class TestAutoEncoder:
             )
         )
 
-        self.model.load_state_dict(state_dict)
-        self.model.eval()
+        model.load_state_dict(state_dict)
+        model.eval()
+
+        return model
 
     def get_residual_map(self, test_img_path: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -140,7 +162,10 @@ class TestAutoEncoder:
              Tuple containing the original image, reconstructed image, and SSIM residual map.
         """
 
-        test_img = cv2.imread(test_img_path, 0)
+        if self.grayscale:
+            test_img = cv2.imread(test_img_path, cv2.IMREAD_GRAYSCALE)
+        else:
+            test_img = cv2.imread(test_img_path)
 
         if test_img.shape[:2] != self.test_cfg.get("img_size"):
             test_img = cv2.resize(test_img, self.test_cfg.get("img_size"))
@@ -155,8 +180,11 @@ class TestAutoEncoder:
             decoded_img = self.model(test_img_)
         else:
             patches = get_patch(test_img_, self.test_cfg.get("crop_size")[0], self.test_cfg.get("stride"))
-            patches = np.expand_dims(patches, 0)
-            patches = np.transpose(patches, (1, 0, 2, 3))
+            if self.grayscale:
+                patches = np.expand_dims(patches, 0)
+                patches = np.transpose(patches, (1, 0, 2, 3))
+            else:
+                patches = np.transpose(patches, (0, 3, 1, 2))
             patches = torch.from_numpy(patches).float()
             patches = patches.to(self.device)
             patches = self.model(patches)
@@ -170,7 +198,12 @@ class TestAutoEncoder:
             )
 
         rec_img = np.reshape((decoded_img * 255.).astype('uint8'), test_img.shape)
-        ssim_residual_map = 1 - ssim(test_img, rec_img, win_size=11, full=True)[1]
+
+        if self.grayscale:
+            ssim_residual_map = 1 - ssim(test_img, rec_img, win_size=11, full=True)[1]
+        else:
+            ssim_residual_map = ssim(test_img, rec_img, win_size=11, full=True, multichannel=True, channel_axis=2)[1]
+            ssim_residual_map = 1 - np.mean(ssim_residual_map, axis=2)
 
         return test_img, rec_img, ssim_residual_map
 
@@ -352,7 +385,7 @@ class TestAutoEncoder:
             all_tpr.append(true_pos_rate)
 
             if self.test_cfg.get("vis_results"):
-                vis_img = set_img_color(test_img.copy(), mask_copy, weight_foreground=0.3)
+                vis_img = set_img_color(test_img.copy(), mask_copy, weight_foreground=0.3, grayscale=self.grayscale)
                 self.plot_rec_images(test_img, rec_img, mask_copy, vis_img, idx, ssim_threshold)
 
         return avg_of_list(all_fpr), avg_of_list(all_tpr)
@@ -367,9 +400,15 @@ class TestAutoEncoder:
                 desc='Calculating SSIM and MSE'
         ):
             train_img, rec_img, _ = self.get_residual_map(train_img)
-            ssim_res = ssim(train_img, rec_img, win_size=11, full=True)[0]
+
+            if self.grayscale:
+                ssim_res = ssim(train_img, rec_img, win_size=11, full=True)[0]
+                mse_res = mean_squared_error(train_img, rec_img)
+            else:
+                ssim_res = ssim(train_img, rec_img, win_size=11, full=True, multichannel=True, channel_axis=2)[0]
+                mse_res = mean_squared_error(train_img.flatten(), rec_img.flatten())
+
             ssim_list.append(ssim_res)
-            mse_res = mean_squared_error(train_img, rec_img)
             mse_list.append(mse_res)
 
         avg_ssim = avg_of_list(ssim_list)

@@ -7,7 +7,7 @@ from torchvision import transforms
 
 
 class MVTecDatasetDenoising(Dataset):
-    def __init__(self, root_dir, noise_dir):
+    def __init__(self, root_dir, noise_dir, grayscale):
         self.root_dir = root_dir
         self.noise_dir = noise_dir
         self.image_files = sorted([os.path.join(root_dir, filename) for filename in os.listdir(root_dir)])
@@ -15,10 +15,15 @@ class MVTecDatasetDenoising(Dataset):
 
         assert len(self.image_files) == len(self.noise_files), "Number of image files and noise files must be the same"
 
-        self.transform = transforms.Compose([
-            transforms.Grayscale(num_output_channels=1),
-            transforms.ToTensor()
-        ])
+        if grayscale:
+            self.transform = transforms.Compose([
+                transforms.Grayscale(num_output_channels=1),
+                transforms.ToTensor()
+            ])
+        else:
+            self.transform = transforms.Compose([
+                transforms.ToTensor(),
+            ])
 
     def __len__(self):
         return len(self.image_files)

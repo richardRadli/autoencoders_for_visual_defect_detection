@@ -10,12 +10,20 @@
     },
     "dataset_type": {
       "type": "string",
-      "enum": ["texture_1", "texture_2"],
+      "enum": ["texture_1", "texture_2", "cpu"],
       "description": "The name of the selected dataset."
+    },
+    "subtest_folder": {
+      "type": "string",
+      "description": "The name of the selected subtest folder."
     },
     "vis_results": {
       "type": "boolean",
       "description": "Whether to visualize the results."
+    },
+    "grayscale": {
+      "type": "boolean",
+      "description": "Whether to use grayscale or not."
     },
     "img_size": {
       "type": "array",
@@ -60,6 +68,41 @@
     "img_size",
     "crop_size",
     "stride",
+    "grayscale",
     "device"
-  ]
+  ],
+  "if": {
+    "properties": {
+      "dataset_type": {
+        "enum": ["texture_1", "texture_2"]
+      }
+    }
+  },
+  "then": {
+    "properties": {
+      "subtest_folder": {
+        "type": "string",
+        "enum": ["defective"]
+      }
+    },
+    "required": ["subtest_folder"]
+  },
+  "else": {
+    "if": {
+      "properties": {
+        "dataset_type": {
+          "enum": ["cpu"]
+        }
+      }
+    },
+    "then": {
+      "properties": {
+        "subtest_folder": {
+          "type": "string",
+          "enum": ["cpua", "cpuc", "cpum"]
+        }
+      },
+      "required": ["subtest_folder"]
+    }
+  }
 }

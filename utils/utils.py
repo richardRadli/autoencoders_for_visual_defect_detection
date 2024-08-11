@@ -161,17 +161,19 @@ def patch2img(patches, im_size: int, patch_size: int, stride: int) -> np.ndarray
     return img
 
 
-def set_img_color(img: np.ndarray, predict_mask: np.ndarray, weight_foreground: float) -> np.ndarray:
+def set_img_color(img: np.ndarray, predict_mask: np.ndarray, weight_foreground: float, grayscale: bool) -> np.ndarray:
     """
     Modify image colors based on a predicted mask.
 
         img: Input image as a NumPy array.
         predict_mask: Predicted mask as a binary NumPy array.
         weight_foreground: Weight for blending the modified image with the original.
+        grayscale:
     Returns: Modified image as a NumPy array.
     """
 
-    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    if grayscale:
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     origin = img
     img[np.where(predict_mask == 255)] = (0, 0, 255)
     cv2.addWeighted(img, weight_foreground, origin, (1 - weight_foreground), 0, img)
@@ -323,12 +325,13 @@ def visualize_images(
     gc.collect()
 
 
-def get_loss_function(loss_function_type: str):
+def get_loss_function(loss_function_type: str, grayscale=None):
     """
     Get the loss function based on the provided loss function type.
 
     Args:
         loss_function_type: String specifying the type of loss function ("mse" or "ssim").
+        grayscale: Optional boolean specifying whether to use grayscale or not.
 
     Returns:
          Loss function instance.
@@ -336,7 +339,7 @@ def get_loss_function(loss_function_type: str):
 
     loss_functions = {
         "mse": nn.MSELoss(),
-        "ssim": SSIM(win_sigma=1.5, data_range=1, size_average=True, channel=1)
+        "ssim": SSIM(win_sigma=1.5, data_range=1, size_average=True, channel=1 if grayscale else 3),
     }
 
     if loss_function_type in loss_functions:

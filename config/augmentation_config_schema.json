@@ -9,7 +9,7 @@
     },
     "dataset_type": {
       "type": "string",
-      "enum": ["texture_1", "texture_2"],
+      "enum": ["texture_1", "texture_2", "cpu"],
       "description": "The name of the selected dataset."
     },
     "img_size": {

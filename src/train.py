@@ -80,7 +80,8 @@ class TrainAutoEncoder:
         # Setup loss function, optimizer, LR scheduler and device
         self.criterion = (
             get_loss_function(
-                self.train_cfg.get("loss_function_type")
+                loss_function_type=self.train_cfg.get("loss_function_type"),
+                grayscale=self.train_cfg.get("grayscale"),
             )
         )
 
@@ -143,14 +144,16 @@ class TrainAutoEncoder:
         if self.network_type in ["AE", "AEE"]:
             dataset = (
                 MVTecDataset(
-                    root_dir=dataset_images_path_selector().get(self.dataset_type).get("aug")
+                    root_dir=dataset_images_path_selector().get(self.dataset_type).get("aug"),
+                    grayscale=self.train_cfg.get("grayscale")
                 )
             )
         else:
             dataset = (
                 MVTecDatasetDenoising(
                     root_dir=dataset_images_path_selector().get(self.dataset_type).get("aug"),
-                    noise_dir=dataset_images_path_selector().get(self.dataset_type).get("noise")
+                    noise_dir=dataset_images_path_selector().get(self.dataset_type).get("noise"),
+                    grayscale=self.train_cfg.get("grayscale")
                 )
             )
 
