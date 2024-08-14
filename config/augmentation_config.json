@@ -8,8 +8,8 @@
   "rotate_angle_vari": 45.0,
   "p_rotate_crop": 1.0,
   "p_crop": 1,
-  "p_horizontal_flip": 0.3,
-  "p_vertical_flip": 0.3,
+  "p_horizontal_flip": 0.0,
+  "p_vertical_flip": 0.0,
   "size_of_cover": 20,
   "num_workers": 6
 }

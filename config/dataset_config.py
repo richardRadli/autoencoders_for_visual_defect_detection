@@ -12,8 +12,10 @@ def dataset_data_path_selector():
                 IMAGES_PATH.get_data_path("texture_1_training_vis"),
             "roc_plot":
                 IMAGES_PATH.get_data_path("texture_1_roc_plot"),
-            "reconstruction_images":
+            "reconstruction_vis_images":
                 IMAGES_PATH.get_data_path("texture_1_reconstruction_vis"),
+            "reconstruction_images":
+                IMAGES_PATH.get_data_path("texture_1_reconstruction"),
             "metrics":
                 DATA_PATH.get_data_path("texture_1_metrics")
         },
@@ -26,8 +28,10 @@ def dataset_data_path_selector():
                 IMAGES_PATH.get_data_path("texture_2_training_vis"),
             "roc_plot":
                 IMAGES_PATH.get_data_path("texture_2_roc_plot"),
-            "reconstruction_images":
+            "reconstruction_vis_images":
                 IMAGES_PATH.get_data_path("texture_2_reconstruction_vis"),
+            "reconstruction_images":
+                IMAGES_PATH.get_data_path("texture_2_reconstruction"),
             "metrics":
                 DATA_PATH.get_data_path("texture_2_metrics")
         },
@@ -40,8 +44,10 @@ def dataset_data_path_selector():
                 IMAGES_PATH.get_data_path("cpu_training_vis"),
             "roc_plot":
                 IMAGES_PATH.get_data_path("cpu_roc_plot"),
-            "reconstruction_images":
+            "reconstruction_vis_images":
                 IMAGES_PATH.get_data_path("cpu_reconstruction_vis"),
+            "reconstruction_images":
+                IMAGES_PATH.get_data_path("cpu_reconstruction"),
             "metrics":
                 DATA_PATH.get_data_path("cpu_metrics")
         }

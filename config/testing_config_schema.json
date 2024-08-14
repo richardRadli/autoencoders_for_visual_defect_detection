@@ -21,6 +21,10 @@
       "type": "boolean",
       "description": "Whether to visualize the results."
     },
+    "vis_reconstruction": {
+      "type": "boolean",
+      "description": "Whether to visualize reconstructed images"
+    },
     "grayscale": {
       "type": "boolean",
       "description": "Whether to use grayscale or not."

@@ -42,7 +42,7 @@ def process_image(image_path: str, path_covered: str, cfg) -> None:
         thickness=-1
     )
 
-    file_name = os.path.join(path_covered, f'{name}.png')
+    file_name = os.path.join(path_covered, f'{name}.JPG')
     cv2.imwrite(file_name, image_covered)
 
 
@@ -69,7 +69,7 @@ def main() -> None:
         dataset_images_path_selector().get(cfg.get("dataset_type")).get("noise")
     )
 
-    images_good = file_reader(path_good, "png")
+    images_good = file_reader(path_good, "JPG")
 
     with ProcessPoolExecutor(max_workers=cfg.get("num_workers")) as executor:
         futures = []

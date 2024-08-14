@@ -59,6 +59,8 @@ class Images(_Const):
             "images/texture_1/roc_plot",
         "texture_1_reconstruction_vis":
             "images/texture_1/reconstruction_vis",
+        "texture_1_reconstruction":
+            "images/texture_1/reconstruction",
 
         "texture_2_training_vis":
             "images/texture_2/training_vis",
@@ -66,13 +68,17 @@ class Images(_Const):
             "images/texture_2/roc_plot",
         "texture_2_reconstruction_vis":
             "images/texture_2/reconstruction_vis",
+        "texture_2_reconstruction":
+            "images/texture_2/reconstruction",
 
         "cpu_training_vis":
             "images/cpu/training_vis",
         "cpu_roc_plot":
             "images/cpu/roc_plot",
         "cpu_reconstruction_vis":
-            "images/cpu/reconstruction_vis"
+            "images/cpu/reconstruction_vis",
+        "cpu_reconstruction":
+            "images/cpu/reconstruction"
     }
 
     # ------------------------------------------------------------------------------------------------------------------

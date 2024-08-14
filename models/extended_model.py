@@ -52,7 +52,8 @@ class ExtendedAutoEncoder(AutoEncoder):
 
         self.decoder = nn.Sequential(
             self._deconv_block_extended(
-                self.latent_space_dimension, self.flc[3], self.kernel_size[2], self.stride[0], self.padding[0], self.alpha_slope
+                self.latent_space_dimension, self.flc[3], self.kernel_size[2], self.stride[0], self.padding[0],
+                self.alpha_slope
             ),
             self._conv_block(
                 self.flc[3], self.flc[3], self.kernel_size[0], self.stride[0], self.padding[1], self.alpha_slope

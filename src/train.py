@@ -75,9 +75,10 @@ class TrainAutoEncoder:
             )
         )
 
+        # Create dataset
         self.train_dataloader, self.valid_dataloader = self.create_dataset()
 
-        # Setup loss function, optimizer, LR scheduler and device
+        # Setup loss function, optimizer, LR scheduler
         self.criterion = (
             get_loss_function(
                 loss_function_type=self.train_cfg.get("loss_function_type"),

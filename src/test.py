@@ -45,80 +45,104 @@ class TestAutoEncoder:
         self.dataset_type = self.test_cfg.get("dataset_type")
         subtest_folder = self.test_cfg.get("subtest_folder")
         self.grayscale = self.test_cfg.get("grayscale")
+        extension = "JPG" if self.dataset_type == "cpu" else "png"
 
         self.mask_size = self.test_cfg.get("patch_size") \
             if self.test_cfg.get("img_size")[0] - self.test_cfg.get("crop_size")[0] < self.test_cfg.get("stride") \
             else self.test_cfg.get("img_size")[0]
+
+        # Select device to use
+        self.device = (
+            device_selector(
+                self.test_cfg.get("device")
+            )
+        )
+
+        # Load model
+        self.model = (
+            self.load_model(
+                network_cfg
+            )
+        )
 
         # Load paths
         train_dataset_path = (
             dataset_images_path_selector().get(self.dataset_type).get("train")
         )
         self.train_images = (
-            file_reader(train_dataset_path, "png")
-        )
-
-        test_path = (
-            dataset_images_path_selector().get(self.dataset_type).get("test").get(subtest_folder)
-        )
-        test_images_path = (
-            test_path.get("test_images")
-        )
-        self.test_images = (
-            file_reader(test_images_path, "png")
-        )
-
-        gt_images_path = (
-            test_path.get("ground_truth")
-        )
-        self.gt_images = (
-            file_reader(gt_images_path, "png")
-        )
-
-        self.cached_gt_images = (
-            self.ground_truth_caching()
-        )
-
-        roc_dir = (
-            dataset_data_path_selector().get(self.dataset_type).get("roc_plot")
-        )
-        self.save_roc_plot_dir = (
-            create_save_dirs(
-                directory_path=roc_dir,
-                network_type=self.network_type,
-                timestamp=timestamp
+            file_reader(
+                file_path=train_dataset_path,
+                extension=extension
             )
         )
 
-        if self.test_cfg.get("vis_results"):
+        if not self.test_cfg.get("vis_reconstruction"):
+            test_path = (
+                dataset_images_path_selector().get(self.dataset_type).get("test").get(subtest_folder)
+            )
+            test_images_path = (
+                test_path.get("test_images")
+            )
+            self.test_images = (
+                file_reader(test_images_path, extension)
+            )
+
+            gt_images_path = (
+                test_path.get("ground_truth")
+            )
+            self.gt_images = (
+                file_reader(gt_images_path, extension)
+            )
+
+            self.cached_gt_images = (
+                self.ground_truth_caching()
+            )
+
+            roc_dir = (
+                dataset_data_path_selector().get(self.dataset_type).get("roc_plot")
+            )
+            self.save_roc_plot_dir = (
+                create_save_dirs(
+                    directory_path=roc_dir,
+                    network_type=self.network_type,
+                    timestamp=timestamp
+                )
+            )
+
+            metrics_dir = (
+                dataset_data_path_selector().get(self.dataset_type).get("metrics")
+            )
+            self.metrics_save_dir = (
+                create_save_dirs(
+                    directory_path=metrics_dir,
+                    network_type=self.network_type,
+                    timestamp=timestamp
+                )
+            )
+
+            if self.test_cfg.get("vis_results"):
+                rec_vis_dir = (
+                    dataset_data_path_selector().get(self.dataset_type).get("reconstruction_vis_images")
+                )
+                self.save_reconstruction_plot_dir = (
+                    create_save_dirs(
+                        directory_path=rec_vis_dir,
+                        network_type=self.network_type,
+                        timestamp=timestamp
+                    )
+                )
+
+        else:
             rec_dir = (
                 dataset_data_path_selector().get(self.dataset_type).get("reconstruction_images")
             )
-            self.save_reconstruction_plot_dir = (
+            self.save_reconstruction_dir = (
                 create_save_dirs(
                     directory_path=rec_dir,
                     network_type=self.network_type,
                     timestamp=timestamp
                 )
             )
-
-        metrics_dir = (
-            dataset_data_path_selector().get(self.dataset_type).get("metrics")
-        )
-        self.metrics_save_dir = (
-            create_save_dirs(
-                directory_path=metrics_dir,
-                network_type=self.network_type,
-                timestamp=timestamp
-            )
-        )
-
-        # Select device to use
-        self.device = (
-            device_selector(self.test_cfg.get("device"))
-        )
-
-        self.model = self.load_model(network_cfg)
 
     def load_model(self, network_cfg):
         """
@@ -166,6 +190,7 @@ class TestAutoEncoder:
             test_img = cv2.imread(test_img_path, cv2.IMREAD_GRAYSCALE)
         else:
             test_img = cv2.imread(test_img_path)
+            test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
 
         if test_img.shape[:2] != self.test_cfg.get("img_size"):
             test_img = cv2.resize(test_img, self.test_cfg.get("img_size"))
@@ -178,6 +203,8 @@ class TestAutoEncoder:
         if test_img.shape[:2] == self.test_cfg.get("crop_size"):
             test_img_ = np.expand_dims(test_img_, 0)
             decoded_img = self.model(test_img_)
+            cv2.imshow("decoded_img", decoded_img)
+            cv2.waitKey(0)
         else:
             patches = get_patch(test_img_, self.test_cfg.get("crop_size")[0], self.test_cfg.get("stride"))
             if self.grayscale:
@@ -236,8 +263,31 @@ class TestAutoEncoder:
         step = end / number_of_steps
         return np.arange(start=start, stop=end, step=step)
 
-    def plot_rec_images(self, test_img: np.ndarray, rec_img: np.ndarray, mask: np.ndarray, vis_img: np.ndarray,
-                        idx: int, ssim_threshold: float) -> None:
+    def plot_ori_rec_images(self):
+        """
+
+        :return:
+        """
+
+        for idx, test_img in tqdm(enumerate(self.train_images), total=len(self.train_images), desc='Reconstructing'):
+            filename = os.path.join(self.save_reconstruction_dir, f"{idx}_reconstruction.png")
+            test_img, rec_img, _ = self.get_residual_map(test_img)
+
+            plt.subplot(1, 2, 1)
+            plt.imshow(test_img, cmap='gray')
+            plt.title('test_img')
+
+            plt.subplot(1, 2, 2)
+            plt.imshow(rec_img, cmap='gray')
+            plt.title('rec_img')
+
+            plt.tight_layout()
+            plt.savefig(filename, dpi=300)
+            plt.close()
+            gc.collect()
+
+    def plot_ori_rec_mask_images(self, test_img: np.ndarray, rec_img: np.ndarray, mask: np.ndarray, vis_img: np.ndarray,
+                                 idx: int, ssim_threshold: float) -> None:
         """
         Plot and save a grid of images including the test image, reconstructed image, mask, and visualized image.
 
@@ -386,11 +436,17 @@ class TestAutoEncoder:
 
             if self.test_cfg.get("vis_results"):
                 vis_img = set_img_color(test_img.copy(), mask_copy, weight_foreground=0.3, grayscale=self.grayscale)
-                self.plot_rec_images(test_img, rec_img, mask_copy, vis_img, idx, ssim_threshold)
+                self.plot_ori_rec_mask_images(test_img, rec_img, mask_copy, vis_img, idx, ssim_threshold)
 
         return avg_of_list(all_fpr), avg_of_list(all_tpr)
 
     def calculate_ssim_mse(self):
+        """
+
+        Returns:
+
+        """
+
         ssim_list = []
         mse_list = []
 
@@ -427,38 +483,42 @@ class TestAutoEncoder:
              None
         """
 
-        threshold_range = (
-            self.threshold_calculator(
-                start=self.test_cfg.get("threshold_init"),
-                end=self.test_cfg.get("threshold_end"),
-                number_of_steps=self.test_cfg.get("num_of_steps")
+        if not self.test_cfg.get("vis_reconstruction"):
+            threshold_range = (
+                self.threshold_calculator(
+                    start=self.test_cfg.get("threshold_init"),
+                    end=self.test_cfg.get("threshold_end"),
+                    number_of_steps=self.test_cfg.get("num_of_steps")
+                )
             )
-        )
 
-        fpr_list, tpr_list = [], []
+            fpr_list, tpr_list = [], []
 
-        for ssim_tresh in tqdm(
-                threshold_range,
-                total=len(threshold_range),
-                desc='Calculating FPR and TPR'
-        ):
-            fpr, tpr = self.get_results(ssim_tresh)
-            fpr_list.append(fpr)
-            tpr_list.append(tpr)
+            for ssim_tresh in tqdm(
+                    threshold_range,
+                    total=len(threshold_range),
+                    desc='Calculating FPR and TPR'
+            ):
+                fpr, tpr = self.get_results(ssim_tresh)
+                fpr_list.append(fpr)
+                tpr_list.append(tpr)
 
-        filename = os.path.join(self.metrics_save_dir, 'fpr_tpr_ssim_mse_roc_auc_results.json')
-        avg_ssim, mse_avg = self.calculate_ssim_mse()
-        auc_roc = self.plot_average_roc(fpr_list, tpr_list)
+            filename = os.path.join(self.metrics_save_dir, f"{'fpr_tpr_ssim_mse_roc_auc_results.json'}")
+            avg_ssim, mse_avg = self.calculate_ssim_mse()
+            auc_roc = self.plot_average_roc(fpr_list, tpr_list)
 
-        results = {
-            "fpr_tpr": fpr_list,
-            "tpr_tpr": tpr_list,
-            "avg_ssim": avg_ssim,
-            "mse_avg": mse_avg,
-            "auc_roc": auc_roc,
-        }
+            results = {
+                "fpr_tpr": fpr_list,
+                "tpr_tpr": tpr_list,
+                "avg_ssim": avg_ssim,
+                "mse_avg": mse_avg,
+                "auc_roc": auc_roc,
+            }
 
-        save_list_to_json(filename=filename, results_dict=results)
+            save_list_to_json(filename=filename, results_dict=results)
+
+        else:
+            self.plot_ori_rec_images()
 
 
 if __name__ == '__main__':
