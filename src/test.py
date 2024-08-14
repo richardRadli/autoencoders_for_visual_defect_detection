@@ -45,7 +45,6 @@ class TestAutoEncoder:
         self.dataset_type = self.test_cfg.get("dataset_type")
         subtest_folder = self.test_cfg.get("subtest_folder")
         self.grayscale = self.test_cfg.get("grayscale")
-        extension = "JPG" if self.dataset_type == "cpu" else "png"
 
         self.mask_size = self.test_cfg.get("patch_size") \
             if self.test_cfg.get("img_size")[0] - self.test_cfg.get("crop_size")[0] < self.test_cfg.get("stride") \
@@ -72,7 +71,7 @@ class TestAutoEncoder:
         self.train_images = (
             file_reader(
                 file_path=train_dataset_path,
-                extension=extension
+                extension="JPG"
             )
         )
 
@@ -84,14 +83,14 @@ class TestAutoEncoder:
                 test_path.get("test_images")
             )
             self.test_images = (
-                file_reader(test_images_path, extension)
+                file_reader(test_images_path, "png")
             )
 
             gt_images_path = (
                 test_path.get("ground_truth")
             )
             self.gt_images = (
-                file_reader(gt_images_path, extension)
+                file_reader(gt_images_path, "png")
             )
 
             self.cached_gt_images = (
@@ -325,7 +324,7 @@ class TestAutoEncoder:
         plt.tight_layout()
         plt.title('vis_img')
 
-        plt.savefig(filename)
+        plt.savefig(filename, dpi=300)
         plt.close()
 
         gc.collect()
@@ -508,8 +507,8 @@ class TestAutoEncoder:
             auc_roc = self.plot_average_roc(fpr_list, tpr_list)
 
             results = {
-                "fpr_tpr": fpr_list,
-                "tpr_tpr": tpr_list,
+                "fpr": fpr_list,
+                "tpr": tpr_list,
                 "avg_ssim": avg_ssim,
                 "mse_avg": mse_avg,
                 "auc_roc": auc_roc,

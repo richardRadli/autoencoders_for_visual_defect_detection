@@ -1,6 +1,6 @@
 {
   "validation_split": 0.2,
-  "network_type": "AE",
+  "network_type": "DAEE",
   "dataset_type": "cpu",
   "epochs": 200,
   "batch_size": 128,

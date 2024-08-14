@@ -1,9 +1,9 @@
 {
-  "network_type": "AE",
+  "network_type": "AEE",
   "dataset_type": "cpu",
   "subtest_folder": "cpua",
   "vis_results": false,
-  "vis_reconstruction": true,
+  "vis_reconstruction": false,
   "grayscale": false,
   "img_size": [256, 256],
   "crop_size": [128, 128],
