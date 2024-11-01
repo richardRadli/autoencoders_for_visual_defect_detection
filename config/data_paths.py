@@ -210,19 +210,19 @@ class Datasets(_Const):
 class ConfigFilePaths(_Const):
     dirs_config_paths = {
         "config_augmentation":
-            "config/augmentation_config.json",
+            "config/json_files/augmentation_config.json",
         "config_schema_augmentation":
-            "config/augmentation_config_schema.json",
+            "config/json_files/augmentation_config_schema.json",
 
         "config_training":
-            "config/training_config.json",
+            "config/json_files/training_config.json",
         "config_schema_training":
-            "config/training_config_schema.json",
+            "config/json_files/training_config_schema.json",
 
         "config_testing":
-            "config/testing_config.json",
+            "config/json_files/testing_config.json",
         "config_schema_testing":
-            "config/testing_config_schema.json"
+            "config/json_files/testing_config_schema.json"
     }
 
     # ------------------------------------------------------------------------------------------------------------------

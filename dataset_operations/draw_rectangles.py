@@ -6,8 +6,8 @@ from colorthief import ColorThief
 from concurrent.futures import ProcessPoolExecutor
 from tqdm import tqdm
 
-from config.data_paths import JSON_FILES_PATHS
 from config.dataset_config import dataset_images_path_selector
+from config.json_config import json_config_selector
 from utils.utils import load_config_json, file_reader
 
 
@@ -56,8 +56,8 @@ def main() -> None:
 
     cfg = (
         load_config_json(
-            json_schema_filename=JSON_FILES_PATHS.get_data_path("config_schema_augmentation"),
-            json_filename=JSON_FILES_PATHS.get_data_path("config_augmentation")
+            json_schema_filename=json_config_selector("augmentation")["schema"],
+            json_filename=json_config_selector("augmentation")["config"]
         )
     )
 

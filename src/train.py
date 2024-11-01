@@ -13,7 +13,7 @@ from torchinfo import summary
 
 from config.network_config import network_configs
 from config.dataset_config import dataset_images_path_selector, dataset_data_path_selector
-from config.data_paths import JSON_FILES_PATHS
+from config.json_config import json_config_selector
 from dataloaders.data_loader_ae import MVTecDataset
 from dataloaders.data_loader_dae import MVTecDatasetDenoising
 from models.network_selector import NetworkFactory
@@ -31,8 +31,8 @@ class TrainAutoEncoder:
 
         self.train_cfg = (
             load_config_json(
-                json_schema_filename=JSON_FILES_PATHS.get_data_path("config_schema_training"),
-                json_filename=JSON_FILES_PATHS.get_data_path("config_training")
+                json_schema_filename=json_config_selector("training")["schema"],
+                json_filename=json_config_selector("training")["config"]
             )
         )
 

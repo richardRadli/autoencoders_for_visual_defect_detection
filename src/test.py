@@ -12,8 +12,8 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
 
-from config.data_paths import JSON_FILES_PATHS
 from config.network_config import network_configs
+from config.json_config import json_config_selector
 from config.dataset_config import dataset_data_path_selector, dataset_images_path_selector
 from models.network_selector import NetworkFactory
 from utils.utils import (setup_logger, device_selector, get_patch, patch2img, set_img_color, avg_of_list,
@@ -28,15 +28,15 @@ class TestAutoEncoder:
 
         train_cfg = (
             load_config_json(
-                json_schema_filename=JSON_FILES_PATHS.get_data_path("config_schema_training"),
-                json_filename=JSON_FILES_PATHS.get_data_path("config_training")
+                json_schema_filename=json_config_selector("training")["schema"],
+                json_filename=json_config_selector("training")["config"]
             )
         )
 
         self.test_cfg = (
             load_config_json(
-                json_schema_filename=JSON_FILES_PATHS.get_data_path("config_schema_testing"),
-                json_filename=JSON_FILES_PATHS.get_data_path("config_testing")
+                json_schema_filename=json_config_selector("testing")["schema"],
+                json_filename=json_config_selector("testing")["config"]
             )
         )
 
