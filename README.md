@@ -21,7 +21,7 @@ MVTec Texture 1 and 2 datasets can be downloaded from the following link:
 https://www.mydrive.ch/shares/46066/8338a11f32bb1b7b215c5381abe54ebf/download/420939225-1629955758/textures.zip
 
 Our dataset can be downloaded from here:
-https://drive.google.com/file/d/1LOFXTxGGufXJWHQdBbxTfBAzhwpGmL0j/view?usp=drive_link
+https://drive.google.com/drive/folders/1Lc9uO_i5PHz-rvlbsa7ajvMt5aiuiVhm?usp=sharing
 
 ## Requirement
 Make sure you have the following dependencies installed:
