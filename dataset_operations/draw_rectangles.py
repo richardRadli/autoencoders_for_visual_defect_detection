@@ -62,14 +62,14 @@ def main() -> None:
     )
 
     path_good = (
-        dataset_images_path_selector().get(cfg.get("dataset_type")).get("aug")
+        dataset_images_path_selector().get(cfg.get("dataset_type")).get("train")
     )
 
     path_covered = (
         dataset_images_path_selector().get(cfg.get("dataset_type")).get("noise")
     )
 
-    images_good = file_reader(path_good, "JPG")
+    images_good = file_reader(path_good, "png")
 
     with ProcessPoolExecutor(max_workers=cfg.get("num_workers")) as executor:
         futures = []

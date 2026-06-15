@@ -71,7 +71,7 @@ class TestAutoEncoder:
         self.train_images = (
             file_reader(
                 file_path=train_dataset_path,
-                extension="JPG"
+                extension="png"
             )
         )
 

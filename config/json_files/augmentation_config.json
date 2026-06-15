@@ -1,6 +1,6 @@
 {
   "do_augmentation": true,
-  "dataset_type": "cpu",
+  "dataset_type": "texture_1",
   "img_size": [256, 256],
   "crop_size": [128, 128],
   "augment_num": 12500,

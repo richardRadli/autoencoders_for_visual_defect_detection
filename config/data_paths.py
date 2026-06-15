@@ -9,10 +9,10 @@ class _Const(object):
 
     user = os.getlogin()
     root_mapping = {
-        'ricsi': {
-            "PROJECT_ROOT": 'C:/Users/ricsi/Documents/research/autoencoders_for_visual_defect_detection',
-            "DATASET_ROOT": 'D:/storage/AE/datasets',
-            "STORAGE_ROOT": 'D:/storage/AE'
+        'keplab': {
+            "PROJECT_ROOT": '/media/ssd_storage/Personal/Toth_Balint/autocoder_for_visual_defect_detection',
+            "DATASET_ROOT": '/media/ssd_storage/Personal/Toth_Balint/datasets',
+            "STORAGE_ROOT": '/media/ssd_storage/Personal/Toth_Balint/storage'
         }
     }
 
