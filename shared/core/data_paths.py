@@ -73,24 +73,44 @@ class PathGroup:
 
 # Config JSON files (reused from the existing project, relative to the root).
 CONFIG_PATHS = PathGroup(
-    root=PROJECT_ROOT,
+    root=STORAGE_ROOT,
     mapping={
-        "augmentation_config": "config/json_files/augmentation_config.json",
-        "augmentation_config_schema": "config/json_files/augmentation_config_schema.json",
+        "augmentation_config": "config/json_files/augmentation_config",
+        #"augmentation_config_schema": "config/json_files/augmentation_config_schema.json",
+        #TODO SChema torlese, mert dataclass miatt nem kell
     },
 )
 
 
 # Dataset folders
+#TODO kell még cpunal van még 3 almappa, cpu a:added ,c:contemination ,m:missing ,
 DATASET_PATHS = PathGroup(
     root=DATASET_ROOT,
     mapping={
         "texture_1_good": "texture_1/train/good",
+        "texture_1_aug": "texture_1/aug",
         "texture_1_noise": "texture_1/noise",
+        "texture_1_test": "texture_1/test/defective/test_images",
+        "texture_1_ground_truth": "texture_1/test/defective/ground_truth",
+
         "texture_2_good": "texture_2/train/good",
+        "texture_2_aug": "texture_2/aug",
         "texture_2_noise": "texture_2/noise",
+        "texture_2_test": "texture_2/test/defective/test_images",
+        "texture_2_ground_truth": "texture_2/test/defective/ground_truth",
+
         "cpu_good": "cpu/train/good",
+        "cpu_aug": "cpu/aug",
         "cpu_noise": "cpu/noise",
+
+        "cpu_added_test": "cpu/test/cpua/test_images",
+        "cpu_added_ground_truth": "cpu/test/cpua/ground_truth",
+
+        "cpu_contamination_test": "cpu/test/cpuc/test_images",
+        "cpu_contamination_ground_truth": "cpu/test/cpuc/ground_truth",
+
+        "cpu_missing_test": "cpu/test/cpum/test_images",
+        "cpu_missing_ground_truth": "cpu/test/cpum/ground_truth",
     },
 )
 
@@ -114,5 +134,6 @@ def init_all_paths() -> None:
         None
     """
     init_storage()
+    CONFIG_PATHS.create_dirs()
     DATASET_PATHS.create_dirs()
     logging.info("All shared paths initialized")
