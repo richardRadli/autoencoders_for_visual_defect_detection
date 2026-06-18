@@ -1,15 +1,16 @@
 import logging
+import os
 import random
-
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
-
 from colorthief import ColorThief
+
 from services.data_operations.app.core.aug_config_service import AugmentationConfig
 from shared.core.path_bindings import dataset_paths
+from utils.utils import file_reader
 
 
 @dataclass
@@ -20,7 +21,7 @@ class DrawRectanglesResult:
     processed_images: int
 
 
-def _process_image(image_path: Path, target_dir: Path, crop_size: int, size_of_cover: int) -> None:
+def _process_image(image_path: str, target_dir: str, crop_size: int, size_of_cover: int) -> None:
     """
     Draw a dominant-color square on one image and save it to the target directory.
 
@@ -33,11 +34,11 @@ def _process_image(image_path: Path, target_dir: Path, crop_size: int, size_of_c
     Returns:
         None
     """
-    image = cv2.imread(str(image_path), 1)
+    image = cv2.imread(image_path, 1)
     if image is None:
         raise ValueError(f"Cannot read image: {image_path}")
 
-    dominant_color = ColorThief(str(image_path)).get_color(quality=1)
+    dominant_color = ColorThief(image_path).get_color(quality=1)
 
     max_position = crop_size - size_of_cover
     if max_position < 0:
@@ -54,11 +55,11 @@ def _process_image(image_path: Path, target_dir: Path, crop_size: int, size_of_c
         thickness=-1,
     )
 
-    #TODO ezek os.path.join-ok legyenek
-    target_path = target_dir / f"{image_path.stem}.JPG"
-    cv2.imwrite(str(target_path), covered_image)
+    name = os.path.splitext(os.path.basename(image_path))[0]
+    target_path = os.path.join(target_dir, f"{name}.JPG")
+    cv2.imwrite(target_path, covered_image)
 
-#TODOS tatikus fgv kell h legyen, SELF NEM KEll?
+
 class DrawRectanglesService:
     @staticmethod
     def run(dataset_type: str, config: AugmentationConfig) -> DrawRectanglesResult:
@@ -75,17 +76,19 @@ class DrawRectanglesService:
         paths = dataset_paths(dataset_type)
         source_dir = paths["good"]
         target_dir = paths["noise"]
+
         target_dir.mkdir(parents=True, exist_ok=True)
 
-        #TODO numerical_sort, file reader utilsból, nem *png lehet 2 extension, 1. png, ha nem png akkor fallback 2. jpg
-        image_paths = sorted(source_dir.glob("*.png"))
+        image_paths = file_reader(str(source_dir), "png")
+        if not image_paths:
+            image_paths = file_reader(str(source_dir), "jpg")
 
         with ProcessPoolExecutor(max_workers=config.num_workers) as executor:
             futures = [
                 executor.submit(
                     _process_image,
                     image_path,
-                    target_dir,
+                    str(target_dir),
                     config.crop_size,
                     config.size_of_cover,
                 )
