@@ -76,14 +76,11 @@ CONFIG_PATHS = PathGroup(
     root=STORAGE_ROOT,
     mapping={
         "augmentation_config": "config/json_files/augmentation_config",
-        #"augmentation_config_schema": "config/json_files/augmentation_config_schema.json",
-        #TODO SChema torlese, mert dataclass miatt nem kell
     },
 )
 
 
 # Dataset folders
-#TODO kell még cpunal van még 3 almappa, cpu a:added ,c:contemination ,m:missing ,
 DATASET_PATHS = PathGroup(
     root=DATASET_ROOT,
     mapping={
@@ -114,6 +111,35 @@ DATASET_PATHS = PathGroup(
     },
 )
 
+STORAGE_PATHS = PathGroup(
+    root=STORAGE_ROOT,
+    mapping={
+        "texture_1_model_weights": "data/texture_1/model_weights",
+        "texture_1_model_logs": "data/texture_1/model_logs",
+        "texture_1_metrics": "data/texture_1/metrics",
+        "texture_1_training_vis": "images/texture_1/training_vis",
+        "texture_1_roc_plot": "images/texture_1/roc_plot",
+        "texture_1_reconstruction_vis": "images/texture_1/reconstruction_vis",
+        "texture_1_reconstruction": "images/texture_1/reconstruction",
+
+        "texture_2_model_weights": "data/texture_2/model_weights",
+        "texture_2_model_logs": "data/texture_2/model_logs",
+        "texture_2_metrics": "data/texture_2/metrics",
+        "texture_2_training_vis": "images/texture_2/training_vis",
+        "texture_2_roc_plot": "images/texture_2/roc_plot",
+        "texture_2_reconstruction_vis": "images/texture_2/reconstruction_vis",
+        "texture_2_reconstruction": "images/texture_2/reconstruction",
+
+        "cpu_model_weights": "data/cpu/model_weights",
+        "cpu_model_logs": "data/cpu/model_logs",
+        "cpu_metrics": "data/cpu/metrics",
+        "cpu_training_vis": "images/cpu/training_vis",
+        "cpu_roc_plot": "images/cpu/roc_plot",
+        "cpu_reconstruction_vis": "images/cpu/reconstruction_vis",
+        "cpu_reconstruction": "images/cpu/reconstruction",
+    },
+)
+
 
 def init_storage() -> None:
     """
@@ -136,4 +162,5 @@ def init_all_paths() -> None:
     init_storage()
     CONFIG_PATHS.create_dirs()
     DATASET_PATHS.create_dirs()
+    STORAGE_PATHS.create_dirs()
     logging.info("All shared paths initialized")

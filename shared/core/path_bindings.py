@@ -1,4 +1,4 @@
-from shared.core.data_paths import CONFIG_PATHS, DATASET_PATHS
+from shared.core.data_paths import CONFIG_PATHS, DATASET_PATHS, STORAGE_PATHS
 
 
 def config_paths(config_type) -> dict:
@@ -9,7 +9,7 @@ def config_paths(config_type) -> dict:
 
 
 def dataset_paths(dataset_type) -> dict:
-        dta_paths= {
+    dta_paths= {
         "texture_1": {
             "good": DATASET_PATHS["texture_1_good"],
             "aug": DATASET_PATHS["texture_1_aug"],
@@ -48,4 +48,36 @@ def dataset_paths(dataset_type) -> dict:
             },
         },
     }
-        return dta_paths[dataset_type]
+    return dta_paths[dataset_type]
+
+def storage_paths(dataset_type) -> dict:
+    stg_paths = {
+        "texture_1": {
+            "model_weights": STORAGE_PATHS["texture_1_model_weights"],
+            "model_logs": STORAGE_PATHS["texture_1_model_logs"],
+            "metrics": STORAGE_PATHS["texture_1_metrics"],
+            "training_vis": STORAGE_PATHS["texture_1_training_vis"],
+            "roc_plot": STORAGE_PATHS["texture_1_roc_plot"],
+            "reconstruction_vis": STORAGE_PATHS["texture_1_reconstruction_vis"],
+            "reconstruction": STORAGE_PATHS["texture_1_reconstruction"],
+        },
+        "texture_2": {
+            "model_weights": STORAGE_PATHS["texture_2_model_weights"],
+            "model_logs": STORAGE_PATHS["texture_2_model_logs"],
+            "metrics": STORAGE_PATHS["texture_2_metrics"],
+            "training_vis": STORAGE_PATHS["texture_2_training_vis"],
+            "roc_plot": STORAGE_PATHS["texture_2_roc_plot"],
+            "reconstruction_vis": STORAGE_PATHS["texture_2_reconstruction_vis"],
+            "reconstruction": STORAGE_PATHS["texture_2_reconstruction"],
+        },
+        "cpu": {
+            "model_weights": STORAGE_PATHS["cpu_model_weights"],
+            "model_logs": STORAGE_PATHS["cpu_model_logs"],
+            "metrics": STORAGE_PATHS["cpu_metrics"],
+            "training_vis": STORAGE_PATHS["cpu_training_vis"],
+            "roc_plot": STORAGE_PATHS["cpu_roc_plot"],
+            "reconstruction_vis": STORAGE_PATHS["cpu_reconstruction_vis"],
+            "reconstruction": STORAGE_PATHS["cpu_reconstruction"],
+        },
+    }
+    return stg_paths[dataset_type]

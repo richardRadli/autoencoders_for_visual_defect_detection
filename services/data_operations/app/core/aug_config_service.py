@@ -4,20 +4,21 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, Any
 
+
 @dataclass
 class AugmentationConfig:
-        dataset_type: str
-        img_size: int
-        crop_size: int
-        augment_num: int
-        p_rotate: float
-        rotate_angle_vari: float
-        p_rotate_crop: float
-        p_crop: int
-        p_horizontal_flip: float
-        p_vertical_flip: float
-        size_of_cover: int
-        num_workers: int
+    dataset_type: str
+    img_size: int
+    crop_size: int
+    augment_num: int
+    p_rotate: float
+    rotate_angle_vari: float
+    p_rotate_crop: float
+    p_crop: int
+    p_horizontal_flip: float
+    p_vertical_flip: float
+    size_of_cover: int
+    num_workers: int
 
 class DeviceConfigService:
 
@@ -42,14 +43,13 @@ class DeviceConfigService:
                 num_workers=data["num_workers"],
             )
 
-
             logging.info(f"Loaded device config: {filepath}")
             return augmentation_config
 
         except KeyError as e:
-            logging.error( f"Missing config field: {e}")
+            logging.error(f"Missing config field: {e}")
             raise
 
         except Exception as e:
-            logging.error( f"Failed to load device config: {e}")
+            logging.error(f"Failed to load device config: {e}")
             raise
