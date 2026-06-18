@@ -1,4 +1,4 @@
-from shared.core.data_paths import CONFIG_PATHS, DATASET_PATHS, STORAGE_PATHS
+from shared.core.data_paths import CONFIG_PATHS, DATASET_PATHS, TRAINING_TESTING_PATHS
 
 
 def config_paths(config_type) -> dict:
@@ -50,34 +50,35 @@ def dataset_paths(dataset_type) -> dict:
     }
     return dta_paths[dataset_type]
 
-def storage_paths(dataset_type) -> dict:
-    stg_paths = {
+
+def training_testing_paths(dataset_type) -> dict:
+    tt_paths = {
         "texture_1": {
-            "model_weights": STORAGE_PATHS["texture_1_model_weights"],
-            "model_logs": STORAGE_PATHS["texture_1_model_logs"],
-            "metrics": STORAGE_PATHS["texture_1_metrics"],
-            "training_vis": STORAGE_PATHS["texture_1_training_vis"],
-            "roc_plot": STORAGE_PATHS["texture_1_roc_plot"],
-            "reconstruction_vis": STORAGE_PATHS["texture_1_reconstruction_vis"],
-            "reconstruction": STORAGE_PATHS["texture_1_reconstruction"],
+            "model_weights": TRAINING_TESTING_PATHS["texture_1_model_weights"],
+            "model_logs": TRAINING_TESTING_PATHS["texture_1_model_logs"],
+            "metrics": TRAINING_TESTING_PATHS["texture_1_metrics"],
+            "training_vis": TRAINING_TESTING_PATHS["texture_1_training_vis"],
+            "roc_plot": TRAINING_TESTING_PATHS["texture_1_roc_plot"],
+            "reconstruction_vis": TRAINING_TESTING_PATHS["texture_1_reconstruction_vis"],
+            "reconstruction": TRAINING_TESTING_PATHS["texture_1_reconstruction"],
         },
         "texture_2": {
-            "model_weights": STORAGE_PATHS["texture_2_model_weights"],
-            "model_logs": STORAGE_PATHS["texture_2_model_logs"],
-            "metrics": STORAGE_PATHS["texture_2_metrics"],
-            "training_vis": STORAGE_PATHS["texture_2_training_vis"],
-            "roc_plot": STORAGE_PATHS["texture_2_roc_plot"],
-            "reconstruction_vis": STORAGE_PATHS["texture_2_reconstruction_vis"],
-            "reconstruction": STORAGE_PATHS["texture_2_reconstruction"],
+            "model_weights": TRAINING_TESTING_PATHS["texture_2_model_weights"],
+            "model_logs": TRAINING_TESTING_PATHS["texture_2_model_logs"],
+            "metrics": TRAINING_TESTING_PATHS["texture_2_metrics"],
+            "training_vis": TRAINING_TESTING_PATHS["texture_2_training_vis"],
+            "roc_plot": TRAINING_TESTING_PATHS["texture_2_roc_plot"],
+            "reconstruction_vis": TRAINING_TESTING_PATHS["texture_2_reconstruction_vis"],
+            "reconstruction": TRAINING_TESTING_PATHS["texture_2_reconstruction"],
         },
         "cpu": {
-            "model_weights": STORAGE_PATHS["cpu_model_weights"],
-            "model_logs": STORAGE_PATHS["cpu_model_logs"],
-            "metrics": STORAGE_PATHS["cpu_metrics"],
-            "training_vis": STORAGE_PATHS["cpu_training_vis"],
-            "roc_plot": STORAGE_PATHS["cpu_roc_plot"],
-            "reconstruction_vis": STORAGE_PATHS["cpu_reconstruction_vis"],
-            "reconstruction": STORAGE_PATHS["cpu_reconstruction"],
+            "model_weights": TRAINING_TESTING_PATHS["cpu_model_weights"],
+            "model_logs": TRAINING_TESTING_PATHS["cpu_model_logs"],
+            "metrics": TRAINING_TESTING_PATHS["cpu_metrics"],
+            "training_vis": TRAINING_TESTING_PATHS["cpu_training_vis"],
+            "roc_plot": TRAINING_TESTING_PATHS["cpu_roc_plot"],
+            "reconstruction_vis": TRAINING_TESTING_PATHS["cpu_reconstruction_vis"],
+            "reconstruction": TRAINING_TESTING_PATHS["cpu_reconstruction"],
         },
     }
-    return stg_paths[dataset_type]
+    return tt_paths[dataset_type]

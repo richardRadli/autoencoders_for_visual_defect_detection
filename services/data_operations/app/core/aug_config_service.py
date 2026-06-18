@@ -1,6 +1,6 @@
 import json
 import logging
-
+import os
 from dataclasses import dataclass
 from typing import Dict, Any
 
@@ -20,12 +20,21 @@ class AugmentationConfig:
     size_of_cover: int
     num_workers: int
 
-class DeviceConfigService:
+
+class AugmentationConfigService:
 
     @staticmethod
-    def load(filepath: str) -> AugmentationConfig:
+    def load(base_path: str) -> AugmentationConfig:
+        base_path = str(base_path)
+        if os.path.isdir(base_path):
+            target_file = os.path.join(base_path, "augmentation_config.json")
+        elif not base_path.endswith(".json"):
+            target_file = f"{base_path}.json"
+        else:
+            target_file = base_path
+
         try:
-            with open(filepath, "r") as f:
+            with open(target_file, "r", encoding="utf-8") as f:
                 data: Dict[str, Any] = json.load(f)
 
             augmentation_config = AugmentationConfig(
@@ -43,7 +52,7 @@ class DeviceConfigService:
                 num_workers=data["num_workers"],
             )
 
-            logging.info(f"Loaded device config: {filepath}")
+            logging.info(f"Loaded config from: {target_file}")
             return augmentation_config
 
         except KeyError as e:
@@ -51,5 +60,5 @@ class DeviceConfigService:
             raise
 
         except Exception as e:
-            logging.error(f"Failed to load device config: {e}")
+            logging.error(f"Failed to load augmentation config: {e}")
             raise

@@ -111,7 +111,7 @@ DATASET_PATHS = PathGroup(
     },
 )
 
-STORAGE_PATHS = PathGroup(
+TRAINING_TESTING_PATHS = PathGroup(
     root=STORAGE_ROOT,
     mapping={
         "texture_1_model_weights": "data/texture_1/model_weights",
@@ -162,5 +162,5 @@ def init_all_paths() -> None:
     init_storage()
     CONFIG_PATHS.create_dirs()
     DATASET_PATHS.create_dirs()
-    STORAGE_PATHS.create_dirs()
+    TRAINING_TESTING_PATHS.create_dirs()
     logging.info("All shared paths initialized")
