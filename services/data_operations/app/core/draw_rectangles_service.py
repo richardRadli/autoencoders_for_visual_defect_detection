@@ -11,9 +11,7 @@ from colorthief import ColorThief
 
 from services.data_operations.app.core.aug_config_service import AugmentationConfig
 from shared.core.path_bindings import dataset_paths
-from utils.utils import resolve_num_workers
-
-SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+from utils.utils import file_reader, resolve_num_workers
 
 @dataclass
 class DrawRectanglesResult:
@@ -84,7 +82,7 @@ class DrawRectanglesService:
 
         target_dir.mkdir(parents=True, exist_ok=True)
 
-        image_paths = _read_image_paths(source_dir)
+        image_paths = file_reader(str(source_dir), "png", "jpg")
 
         num_workers = resolve_num_workers(config.num_workers)
 

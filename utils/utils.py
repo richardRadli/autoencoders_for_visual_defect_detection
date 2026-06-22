@@ -196,34 +196,31 @@ def numerical_sort(value: str) -> List[Union[str, int]]:
     parts[1::2] = map(int, parts[1::2])
     return parts
 
-SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 
-def file_reader(file_path: str, extension=SUPPORTED_IMAGE_EXTENSIONS) -> List[str]:
+def file_reader(file_path: str, extension: str, extension2: str = None):
     """
-    Read files from a directory by extension(s), case-insensitively, numerically sorted.
+    Reads and sorts files with specific extensions from a directory.
 
     Args:
-        file_path (str): Directory to read from.
-        extension: A single extension like "png", or a set of them. The leading
-            dot is optional. Defaults to all supported image extensions.
+        file_path (str): Path to the directory.
+        extension1 (str): Primary file extension to search for.
+        extension2 (str | None): Secondary file extension to search for if no files are found with primary.
 
     Returns:
-        List[str]: A numerically sorted list of matching file paths.
+        list[str]: A sorted list of file paths.
     """
-    if isinstance(extension, str):
-        extension = {extension}
 
-    targets = {
-        ext.lower() if ext.startswith(".") else f".{ext.lower()}"
-        for ext in extension
-    }
+    files = sorted(
+        [str(file) for file in Path(file_path).glob(f"*.{extension}")],
+        key=numerical_sort,
+    )
+    if not files and extension2:
+        files = sorted(
+            [str(file) for file in Path(file_path).glob(f"*.{extension2}")],
+            key=numerical_sort,
+        )
 
-    files = [
-        str(file)
-        for file in Path(file_path).iterdir()
-        if file.is_file() and file.suffix.lower() in targets
-    ]
-    return sorted(files, key=numerical_sort)
+    return files
 
 def resolve_num_workers(config_num_workers: int) -> int:
     """
