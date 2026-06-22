@@ -4,6 +4,9 @@ from shared.core.data_paths import CONFIG_PATHS, DATASET_PATHS, TRAINING_TESTING
 def config_paths() -> dict:
     cfg_paths = {
         "augmentation_config": CONFIG_PATHS["augmentation_config"],
+        "testing_config": CONFIG_PATHS["testing_config"],
+        "training_config": CONFIG_PATHS["training_config"],
+        "network_config": CONFIG_PATHS["network_config"],
     }
     return cfg_paths
 

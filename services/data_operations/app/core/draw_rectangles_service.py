@@ -11,7 +11,7 @@ from colorthief import ColorThief
 
 from services.data_operations.app.core.aug_config_service import AugmentationConfig
 from shared.core.path_bindings import dataset_paths
-from utils.utils import numerical_sort, resolve_num_workers
+from utils.utils import resolve_num_workers
 
 SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 
@@ -23,25 +23,6 @@ class DrawRectanglesResult:
     source_dir: Path
     target_dir: Path
     processed_images: int
-
-
-def _read_image_paths(source_dir: Path) -> list[str]:
-    """
-    Read supported image paths from a directory with case-insensitive extensions.
-
-    Args:
-        source_dir: Directory containing input images.
-
-    Returns:
-        list[str]: Numerically sorted image paths.
-    """
-    image_paths = [
-        str(path)
-        for path in source_dir.iterdir()
-        if path.is_file() and path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
-    ]
-
-    return sorted(image_paths, key=numerical_sort)
 
 class DrawRectanglesService:
     @staticmethod

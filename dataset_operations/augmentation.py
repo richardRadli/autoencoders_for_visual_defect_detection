@@ -178,15 +178,14 @@ def main() -> None:
                          json_filename=json_config_selector("augmentation")["config"])
     )
 
-    if aug_cfg.get("do_augmentation"):
-        train_data_dir = dataset_images_path_selector().get(aug_cfg.get("dataset_type"), {}).get("train")
-        aug_out_dir = dataset_images_path_selector().get(aug_cfg.get("dataset_type"), {}).get("aug")
+    train_data_dir = dataset_images_path_selector().get(aug_cfg.get("dataset_type"), {}).get("train")
+    aug_out_dir = dataset_images_path_selector().get(aug_cfg.get("dataset_type"), {}).get("aug")
 
-        if not train_data_dir or not aug_out_dir:
-            raise ValueError("Error: Missing or invalid paths for training data or augmentation output.")
+    if not train_data_dir or not aug_out_dir:
+        raise ValueError("Error: Missing or invalid paths for training data or augmentation output.")
 
-        img_list = generate_image_list(train_data_dir=train_data_dir, augment_num=aug_cfg.get("augment_num"))
-        augment_images(filelist=img_list, aug_out_dir=aug_out_dir, cfg=aug_cfg)
+    img_list = generate_image_list(train_data_dir=train_data_dir, augment_num=aug_cfg.get("augment_num"))
+    augment_images(filelist=img_list, aug_out_dir=aug_out_dir, cfg=aug_cfg)
 
 
 if __name__ == "__main__":

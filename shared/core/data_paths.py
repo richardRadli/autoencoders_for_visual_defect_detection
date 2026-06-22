@@ -76,6 +76,9 @@ CONFIG_PATHS = PathGroup(
     root=STORAGE_ROOT,
     mapping={
         "augmentation_config": "config/json_files/augmentation_config",
+        "testing_config": "config/json_files/testing_config",
+        "training_config": "config/json_files/training_config",
+        "network_config": "config/json_files/network_config",
     },
 )
 

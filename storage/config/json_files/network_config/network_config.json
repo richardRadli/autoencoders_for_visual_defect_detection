@@ -1,0 +1,28 @@
+{
+  "kernel_size": [3, 4, 8],
+  "stride": [1, 2],
+  "padding": [0, 1],
+  "alpha_slope": 0.2,
+
+  "flc": {
+    "base": [32, 64, 128],
+    "extended": [32, 64, 128, 256]
+  },
+
+  "architecture_type": {
+    "AE": "base",
+    "DAE": "base",
+    "AEE": "extended",
+    "DAEE": "extended"
+  },
+
+  "image_size": {
+    "crop": "crop_size",
+    "full": "img_size"
+  },
+
+  "input_channel": {
+    "grayscale": 1,
+    "rgb": 3
+  }
+}
