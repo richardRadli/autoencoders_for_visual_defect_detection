@@ -211,6 +211,18 @@ def file_reader(file_path: str, extension: str) -> List[str]:
 
     return sorted([str(file) for file in Path(file_path).glob(f'*.{extension}')], key=numerical_sort)
 
+def resolve_num_workers(config_num_workers: int) -> int:
+    """
+    Resolve the number of worker processes for parallel processing.
+
+    Args:
+        config_num_workers (int): Number of workers requested by the config.
+
+    Returns:
+        int: The larger of the config value and the CPU core count (at least 1).
+    """
+
+    return max(config_num_workers, os.cpu_count() or 1)
 
 def find_latest_file_in_latest_directory(path: str) -> str:
     """
@@ -408,10 +420,10 @@ def load_config_json(json_schema_filename: str, json_filename: str):
 
 def save_list_to_json(filename: str, results_dict: dict) -> None:
     """
-    Save metrics to a json file.
+    Save metrics to a JSON file.
 
     Args:
-        filename: Path to the json file where the lists will be saved.
+        filename: Path to the JSON file where the lists will be saved.
         results_dict:
     Returns:
         None

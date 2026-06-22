@@ -35,7 +35,9 @@ async def run_draw_rectangles(
             detail=f"Invalid dataset_type: {dataset_type}. Allowed: {sorted(VALID_DATASETS)}",
         )
 
-    config = AugmentationConfigService.load(config_paths("augmentation_config"))
+    aug_cfg_path = config_paths().get("augmentation_config")
+
+    config = AugmentationConfigService.load(aug_cfg_path)
     result = await run_in_threadpool(DrawRectanglesService.run, dataset_type, config)
 
     logging.info(f"Draw rectangles finished for dataset: {dataset_type}")

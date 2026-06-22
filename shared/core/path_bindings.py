@@ -1,11 +1,11 @@
 from shared.core.data_paths import CONFIG_PATHS, DATASET_PATHS, TRAINING_TESTING_PATHS
 
 
-def config_paths(config_type) -> dict:
+def config_paths() -> dict:
     cfg_paths = {
         "augmentation_config": CONFIG_PATHS["augmentation_config"],
     }
-    return cfg_paths[config_type]
+    return cfg_paths
 
 
 def dataset_paths(dataset_type) -> dict:
