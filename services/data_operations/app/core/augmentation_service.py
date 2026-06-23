@@ -5,14 +5,16 @@ import random
 import cv2
 import numpy as np
 
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple
 from tqdm import tqdm
+from typing import List, Tuple
 
-from services.data_operations.app.core.aug_config_service import AugmentationConfig
 from shared.core.path_bindings import dataset_paths
-from utils.utils import file_reader
+from services.data_operations.app.core.aug_config_service import AugmentationConfig
+from utils.utils import file_reader, resolve_num_workers
+
 
 @dataclass
 class AugmentationResult:
@@ -26,17 +28,19 @@ class AugmentationResult:
 
 
 class AugmentationService:
+    """Generate augmented training images for one dataset."""
+
     @staticmethod
     def _generate_image_list(train_data_dir: str, augment_num: int) -> List[Tuple[str, int]]:
         """
-        Generate a list of image paths with their per-image augmentation counts.
+        Generate image paths with their per-image augmentation counts.
 
         Args:
             train_data_dir: Directory containing the training images.
             augment_num: Total number of augmentations to distribute.
 
         Returns:
-            List[Tuple[str, int]]: (image path, augmentation count) pairs.
+            List[Tuple[str, int]]: Image path and augmentation count pairs.
         """
         image_paths = file_reader(train_data_dir, "png", "jpg")
         num_imgs = len(image_paths)
@@ -61,7 +65,7 @@ class AugmentationService:
 
         Args:
             image: The input image as a NumPy array.
-            new_size: Target (height, width) of the crop.
+            new_size: Target height and width of the crop.
 
         Returns:
             np.ndarray: The cropped image.
@@ -88,10 +92,12 @@ class AugmentationService:
         angle %= 360
         m_rotate = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1)
         img_rotated = cv2.warpAffine(img, m_rotate, (w, h))
+
         if crop:
             angle_crop = angle % 180
             if angle_crop > 90:
                 angle_crop = 180 - angle_crop
+
             theta = angle_crop * np.pi / 180.0
             hw_ratio = float(h) / float(w)
             tan_theta = np.tan(theta)
@@ -104,6 +110,7 @@ class AugmentationService:
             x0 = int((w - w_crop) / 2)
             y0 = int((h - h_crop) / 2)
             img_rotated = img_rotated[y0:y0 + h_crop, x0:x0 + w_crop]
+
         return img_rotated
 
     @staticmethod
@@ -114,60 +121,67 @@ class AugmentationService:
         Args:
             img: The input image as a NumPy array.
             angle_vari: Range of variation for the random rotation angle.
-            p_crop: Probability of cropping after rotation.
+            p_crop: Positive value enables crop-after-rotation.
 
         Returns:
             np.ndarray: The randomly rotated image.
         """
         angle = np.random.uniform(-angle_vari, angle_vari)
-        crop = np.random.random() <= p_crop
+        crop = p_crop > 0
         return AugmentationService._rotate_image(img, angle, crop)
 
     @staticmethod
     def _augment_single(
-        image: np.ndarray, config: AugmentationConfig, crop_size: Tuple[int, int]
+        image: np.ndarray,
+        config: AugmentationConfig,
+        crop_size: Tuple[int, int],
     ) -> Tuple[np.ndarray, str]:
         """
-        Apply the configured random transforms to a single image.
+        Apply enabled transforms to a single image.
 
         Args:
             image: The image to transform.
             config: Loaded augmentation configuration.
-            crop_size: Target (height, width) for cropping.
+            crop_size: Target height and width for cropping.
 
         Returns:
             Tuple[np.ndarray, str]: The transformed image and its name suffix.
         """
         suffix = ""
 
-        if random.random() < config.p_rotate:
-            rotated = AugmentationService._random_rotate(image, config.rotate_angle_vari, config.p_rotate_crop)
+        if config.p_rotate > 0:
+            rotated = AugmentationService._random_rotate(
+                image,
+                config.rotate_angle_vari,
+                config.p_rotate_crop,
+            )
             if rotated.shape[0] >= crop_size[0] and rotated.shape[1] >= crop_size[1]:
                 image = rotated
             suffix += "r"
 
-        if random.random() < config.p_crop:
+        if config.p_crop > 0:
             image = AugmentationService._random_crop(image, crop_size)
             suffix += "c"
 
-        if random.random() < config.p_horizontal_flip:
+        if config.p_horizontal_flip > 0:
             image = cv2.flip(image, 1)
             suffix += "h"
 
-        if random.random() < config.p_vertical_flip:
+        if config.p_vertical_flip > 0:
             image = cv2.flip(image, 0)
             suffix += "v"
 
         return image, suffix
 
     @staticmethod
-    def _augment_images(filelist: List[Tuple[str, int]], aug_out_dir: str, config: AugmentationConfig) -> None:
+    def _process_image(filepath: str, count: int, target_dir: str, config: AugmentationConfig) -> None:
         """
-        Augment a list of images and save the results to the output directory.
+        Read one source image once and write its augmented variants.
 
         Args:
-            filelist: (image path, augmentation count) pairs.
-            aug_out_dir: Directory where augmented images are saved.
+            filepath: Source image path.
+            count: Number of variants to generate.
+            target_dir: Directory where the variants are saved.
             config: Loaded augmentation configuration.
 
         Returns:
@@ -176,20 +190,22 @@ class AugmentationService:
         img_size = (config.img_size, config.img_size)
         crop_size = (config.crop_size, config.crop_size)
 
-        for filepath, count in tqdm(filelist, total=len(filelist), desc="Augmenting images"):
-            image = cv2.imread(filepath)
-            if image is None:
-                raise ValueError(f"Cannot read image: {filepath}")
-            if image.shape[:2] != img_size:
-                image = cv2.resize(image, img_size)
+        image = cv2.imread(filepath)
+        if image is None:
+            raise ValueError(f"Cannot read image: {filepath}")
 
-            name = Path(filepath).stem
-            ext = Path(filepath).suffix
+        if image.shape[:2] != img_size:
+            image = cv2.resize(image, img_size)
 
-            for i in range(count):
-                varied, suffix = AugmentationService._augment_single(image.copy(), config, crop_size)
-                output_path = os.path.join(aug_out_dir, f"{name}_{i:03d}_{suffix}{ext}")
-                cv2.imwrite(output_path, varied)
+        name = Path(filepath).stem
+        ext = Path(filepath).suffix
+
+        for i in range(count):
+            varied, suffix = AugmentationService._augment_single(image.copy(), config, crop_size)
+            output_path = os.path.join(target_dir, f"{name}_{i:03d}_{suffix}{ext}")
+
+            if not cv2.imwrite(output_path, varied):
+                raise ValueError(f"Cannot write image: {output_path}")
 
     @staticmethod
     def run(dataset_type: str, config: AugmentationConfig) -> AugmentationResult:
@@ -210,7 +226,22 @@ class AugmentationService:
         target_dir.mkdir(parents=True, exist_ok=True)
 
         img_list = AugmentationService._generate_image_list(str(source_dir), config.augment_num)
-        AugmentationService._augment_images(img_list, str(target_dir), config)
+        num_workers = resolve_num_workers(config.num_workers)
+
+        with ProcessPoolExecutor(max_workers=num_workers) as executor:
+            futures = [
+                executor.submit(
+                    AugmentationService._process_image,
+                    filepath,
+                    count,
+                    str(target_dir),
+                    config,
+                )
+                for filepath, count in img_list
+            ]
+
+            for future in tqdm(futures, total=len(futures), desc="Augmenting images"):
+                future.result()
 
         logging.info(f"Augmented {config.augment_num} images for dataset: {dataset_type}")
 
