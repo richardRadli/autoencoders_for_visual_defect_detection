@@ -10,13 +10,11 @@ class AugmentationConfig:
     dataset_type: str
     img_size: int
     crop_size: int
-    augment_num: int
-    p_rotate: float
+    rotate_count: int
     rotate_angle_vari: float
     p_rotate_crop: float
-    p_crop: int
-    p_horizontal_flip: float
-    p_vertical_flip: float
+    horizontal_flip_count: int
+    vertical_flip_count: int
     size_of_cover: int
     num_workers: int
 
@@ -41,15 +39,14 @@ class AugmentationConfigService:
                 dataset_type=data["dataset_type"],
                 img_size=data["img_size"],
                 crop_size=data["crop_size"],
-                augment_num=data["augment_num"],
-                p_rotate=data["p_rotate"],
+                rotate_count=data["rotate_count"],
                 rotate_angle_vari=data["rotate_angle_vari"],
                 p_rotate_crop=data["p_rotate_crop"],
-                p_crop=data["p_crop"],
-                p_horizontal_flip=data["p_horizontal_flip"],
-                p_vertical_flip=data["p_vertical_flip"],
+                horizontal_flip_count=data["horizontal_flip_count"],
+                vertical_flip_count=data["vertical_flip_count"],
                 size_of_cover=data["size_of_cover"],
-                num_workers=data["num_workers"],
+                num_workers=data["num_workers"]
+
             )
 
             logging.info(f"Loaded config from: {target_file}")
