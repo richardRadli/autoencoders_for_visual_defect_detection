@@ -1,10 +1,12 @@
 import logging
 
+from dataclasses import replace
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.concurrency import run_in_threadpool
 
 from services.data_operations.app.core.aug_config_service import AugmentationConfigService
 from services.data_operations.app.core.draw_rectangles_service import DrawRectanglesService
+from shared.core.enums import DatasetType
 from shared.core.path_bindings import config_paths
 
 
@@ -13,34 +15,31 @@ draw_rectangles_router = APIRouter(
     tags=["Draw Rectangles"],
 )
 
-VALID_DATASETS = {"texture_1", "texture_2", "cpu"}
-
 
 @draw_rectangles_router.post("/run")
 async def run_draw_rectangles(
-    dataset_type: str = Query(..., description="Dataset to process: texture_1, texture_2 or cpu")
+    dataset_type: DatasetType = Query(..., description="Dataset to process"),
+    size_of_cover: int | None = Query(None, ge=4, le=64, description="Square size to draw (4–64) — empty = config default"),
 ):
     """
     Generate noise images for the selected dataset.
 
     Args:
-        dataset_type: Dataset to process (texture_1, texture_2 or cpu).
+        dataset_type: Dataset to process.
+        size_of_cover: Optional override for the drawn square size (4–64).
 
     Returns:
         dict: Summary with the processed image count and the used paths.
     """
-    if dataset_type not in VALID_DATASETS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid dataset_type: {dataset_type}. Allowed: {sorted(VALID_DATASETS)}",
-        )
-
     aug_cfg_path = config_paths().get("augmentation_config")
-
     config = AugmentationConfigService.load(aug_cfg_path)
-    result = await run_in_threadpool(DrawRectanglesService.run, dataset_type, config)
 
-    logging.info(f"Draw rectangles finished for dataset: {dataset_type}")
+    cover = config.size_of_cover if size_of_cover is None else size_of_cover
+    config = replace(config, size_of_cover=cover)
+
+    result = await run_in_threadpool(DrawRectanglesService.run, dataset_type.value, config)
+
+    logging.info(f"Draw rectangles finished for dataset: {dataset_type.value}")
 
     return {
         "status": "success",

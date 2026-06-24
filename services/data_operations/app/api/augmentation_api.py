@@ -6,6 +6,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from services.data_operations.app.core.aug_config_service import AugmentationConfigService
 from services.data_operations.app.core.augmentation_service import AugmentationService
+from shared.core.enums import DatasetType
 from shared.core.path_bindings import config_paths
 
 
@@ -13,8 +14,6 @@ augmentation_router = APIRouter(
     prefix="/augmentation",
     tags=["Augmentation"],
 )
-
-VALID_DATASETS = {"texture_1", "texture_2", "cpu"}
 
 MIN_TOTAL = 5000
 MAX_TOTAL = 20000
@@ -37,7 +36,7 @@ class CropSize(int, Enum):
 
 @augmentation_router.post("/run")
 async def run_augmentation(
-    dataset_type: str = Query(..., description="Dataset to process: texture_1, texture_2 or cpu"),
+    dataset_type: DatasetType = Query(..., description="Dataset to process"),
     img_size: ImageSize = Query(ImageSize.px_256, description="Source image size"),
     crop_size: CropSize = Query(CropSize.px_128, description="Crop size; must be smaller than img_size and divide it evenly"),
     rotate_count: int | None = Query(None, ge=0, description="Rotated images — empty = config default, 0 = none"),
@@ -52,7 +51,7 @@ async def run_augmentation(
     request: it falls back to the default crop size and reports a warning.
 
     Args:
-        dataset_type: Dataset to process (texture_1, texture_2 or cpu).
+        dataset_type: Dataset to process.
         img_size: Source image size (512 or 256).
         crop_size: Crop size (256, 128 or 64).
         rotate_count: Optional override for the number of rotated images.
@@ -62,12 +61,6 @@ async def run_augmentation(
     Returns:
         dict: Summary with the image counts, the used paths and an optional warning.
     """
-    if dataset_type not in VALID_DATASETS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid dataset_type: {dataset_type}. Allowed: {sorted(VALID_DATASETS)}",
-        )
-
     aug_cfg_path = config_paths().get("augmentation_config")
     config = AugmentationConfigService.load(aug_cfg_path)
 
@@ -81,6 +74,7 @@ async def run_augmentation(
             f"Used default crop_size={config.crop_size} instead."
         )
         crop = config.crop_size
+        logging.warning(warning)
 
     rotate = config.rotate_count if rotate_count is None else rotate_count
     hflip = config.horizontal_flip_count if horizontal_flip_count is None else horizontal_flip_count
@@ -101,9 +95,9 @@ async def run_augmentation(
         "vertical_flip_count": vflip,
     }
 
-    result = await run_in_threadpool(AugmentationService.run, dataset_type, config, overrides)
+    result = await run_in_threadpool(AugmentationService.run, dataset_type.value, config, overrides)
 
-    logging.info(f"Augmentation finished for dataset: {dataset_type}")
+    logging.info(f"Augmentation finished for dataset: {dataset_type.value}")
 
     response = {
         "status": "success",
