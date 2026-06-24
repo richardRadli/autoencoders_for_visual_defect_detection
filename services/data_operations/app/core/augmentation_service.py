@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from tqdm import tqdm
 from typing import List, Tuple
@@ -208,17 +208,41 @@ class AugmentationService:
                 raise ValueError(f"Cannot write image: {output_path}")
 
     @staticmethod
-    def run(dataset_type: str, config: AugmentationConfig) -> AugmentationResult:
+    def _apply_overrides(config: AugmentationConfig, overrides: dict | None) -> AugmentationConfig:
+        """
+        Override config fields with the provided non-None values.
+
+        Args:
+            config: Loaded augmentation configuration.
+            overrides: Field name to value pairs; None values are ignored.
+
+        Returns:
+            AugmentationConfig: The config with the overrides applied.
+        """
+        if not overrides:
+            return config
+
+        active = {key: value for key, value in overrides.items() if value is not None}
+        if not active:
+            return config
+
+        return replace(config, **active)
+
+    @staticmethod
+    def run(dataset_type: str, config: AugmentationConfig, overrides: dict | None = None) -> AugmentationResult:
         """
         Generate the augmented training set for a dataset.
 
         Args:
             dataset_type: Selected dataset name.
             config: Loaded augmentation configuration.
+            overrides: Optional per-operation p_* overrides from the request.
 
         Returns:
             AugmentationResult: Summary of the processing.
         """
+        config = AugmentationService._apply_overrides(config, overrides)
+
         paths = dataset_paths(dataset_type)
         source_dir = paths["good"]
         target_dir = paths["aug"]

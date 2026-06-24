@@ -18,13 +18,25 @@ VALID_DATASETS = {"texture_1", "texture_2", "cpu"}
 
 @augmentation_router.post("/run")
 async def run_augmentation(
-    dataset_type: str = Query(..., description="Dataset to process: texture_1, texture_2 or cpu")
+    dataset_type: str = Query(..., description="Dataset to process: texture_1, texture_2 or cpu"),
+    p_rotate: float | None = Query(None, ge=0, description="Rotate — empty = config default, 0 = off, value > 0 = on"),
+    p_crop: float | None = Query(None, ge=0, description="Crop — empty = config default, 0 = off, value > 0 = on"),
+    p_horizontal_flip: float | None = Query(None, ge=0, description="Horizontal flip — empty = config default, 0 = off, value > 0 = on"),
+    p_vertical_flip: float | None = Query(None, ge=0, description="Vertical flip — empty = config default, 0 = off, value > 0 = on"),
 ):
     """
     Generate the augmented training set for the selected dataset.
 
+    Each augmentation operation is switched by its `p_*` value:
+    empty = use the dataset config default, 0 = off, value > 0 = on
+    (only whether the value is above 0 matters, not its size).
+
     Args:
         dataset_type: Dataset to process (texture_1, texture_2 or cpu).
+        p_rotate: Optional override for the rotate operation.
+        p_crop: Optional override for the crop operation.
+        p_horizontal_flip: Optional override for the horizontal flip operation.
+        p_vertical_flip: Optional override for the vertical flip operation.
 
     Returns:
         dict: Summary with the image counts and the used paths.
@@ -36,9 +48,16 @@ async def run_augmentation(
         )
 
     aug_cfg_path = config_paths().get("augmentation_config")
-
     config = AugmentationConfigService.load(aug_cfg_path)
-    result = await run_in_threadpool(AugmentationService.run, dataset_type, config)
+
+    overrides = {
+        "p_rotate": p_rotate,
+        "p_crop": p_crop,
+        "p_horizontal_flip": p_horizontal_flip,
+        "p_vertical_flip": p_vertical_flip,
+    }
+
+    result = await run_in_threadpool(AugmentationService.run, dataset_type, config, overrides)
 
     logging.info(f"Augmentation finished for dataset: {dataset_type}")
 
