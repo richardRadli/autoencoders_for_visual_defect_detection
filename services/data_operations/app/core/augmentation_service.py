@@ -198,11 +198,10 @@ class AugmentationService:
             image = cv2.resize(image, img_size)
 
         name = Path(filepath).stem
-        ext = Path(filepath).suffix
 
         for i in range(count):
             varied, suffix = AugmentationService._augment_single(image.copy(), config, crop_size)
-            output_path = os.path.join(target_dir, f"{name}_{i:03d}_{suffix}{ext}")
+            output_path = os.path.join(target_dir, f"{name}_{i:03d}_{suffix}.jpg")
 
             if not cv2.imwrite(output_path, varied):
                 raise ValueError(f"Cannot write image: {output_path}")
