@@ -65,19 +65,20 @@ class DrawRectanglesService:
 
 
     @staticmethod
-    def run(dataset_type: str, config: AugmentationConfig) -> DrawRectanglesResult:
+    def run(dataset_type: str, source: str, config: AugmentationConfig) -> DrawRectanglesResult:
         """
         Generate noisy rectangle images for a dataset.
 
         Args:
             dataset_type: Selected dataset name.
+            source: Source folder key to draw on (good or aug).
             config: Loaded augmentation configuration.
 
         Returns:
             DrawRectanglesResult: Summary of the processing.
         """
         paths = dataset_paths(dataset_type)
-        source_dir = paths["good"]
+        source_dir = paths[source]
         target_dir = paths["noise"]
 
         target_dir.mkdir(parents=True, exist_ok=True)
