@@ -1,0 +1,14 @@
+services:
+  data_operations:
+    build:
+      context: .
+      dockerfile: services/data_operations/Dockerfile
+    container_name: data_operations
+    ports:
+      - "8000:8000"
+    volumes:
+      - /media/ssd_storage/Personal/Toth_Balint/datasets:/app/dataset
+      - ./storage:/app/storage
+    environment:
+      - DATASET_ROOT=/app/dataset
+      - STORAGE_ROOT=/app/storage
