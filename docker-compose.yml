@@ -12,3 +12,25 @@ services:
     environment:
       - DATASET_ROOT=/app/dataset
       - STORAGE_ROOT=/app/storage
+
+  defect_detection:
+    build:
+      context: .
+      dockerfile: services/defect_detection/Dockerfile
+    container_name: defect_detection
+    ports:
+      - "8001:8000"
+    volumes:
+      - /media/ssd_storage/Personal/Toth_Balint/datasets:/app/dataset
+      - ./storage:/app/storage
+    environment:
+      - DATASET_ROOT=/app/dataset
+      - STORAGE_ROOT=/app/storage
+    shm_size: "16gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

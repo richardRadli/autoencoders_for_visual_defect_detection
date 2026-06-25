@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+opencv-python-headless
+colorlog
+tqdm
