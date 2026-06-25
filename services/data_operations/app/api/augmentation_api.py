@@ -47,8 +47,9 @@ async def run_augmentation(
     Generate the base crops and the count-based augmented set for a dataset.
 
     The augmented total (rotate + horizontal flip + vertical flip) must be
-    between 5000 and 20000. An invalid size combination does not fail the
-    request: it falls back to the default crop size and reports a warning.
+    between 5000 and 20000, or exactly 0 (base crops only). An invalid size
+    combination does not fail the request: it falls back to the default crop
+    size and reports a warning.
 
     Args:
         dataset_type: Dataset to process.
@@ -81,7 +82,7 @@ async def run_augmentation(
     vflip = config.vertical_flip_count if vertical_flip_count is None else vertical_flip_count
 
     total = rotate + hflip + vflip
-    if total < MIN_TOTAL or total > MAX_TOTAL:
+    if total > 0 and (total < MIN_TOTAL or total > MAX_TOTAL):
         raise HTTPException(
             status_code=422,
             detail=f"Total augmented count must be between {MIN_TOTAL} and {MAX_TOTAL}, got {total}.",
@@ -95,15 +96,25 @@ async def run_augmentation(
         "vertical_flip_count": vflip,
     }
 
-    result = await run_in_threadpool(AugmentationService.run, dataset_type.value, config, overrides)
+    request_params = {
+        "dataset_type": dataset_type.value,
+        "img_size": img,
+        "crop_size": crop,
+        "rotate_count": rotate,
+        "horizontal_flip_count": hflip,
+        "vertical_flip_count": vflip,
+    }
+
+    result = await run_in_threadpool(AugmentationService.run, dataset_type.value, config, request_params, overrides)
 
     logging.info(f"Augmentation finished for dataset: {dataset_type.value}")
 
     response = {
-        "status": "success",
+        "status": "stopped" if result.stopped else "success",
         "dataset_type": result.dataset_type,
         "source_images": result.source_images,
         "augmented_images": result.augmented_images,
+        "processed_images": result.processed_images,
         "source_dir": str(result.source_dir),
         "target_dir": str(result.target_dir),
     }
@@ -111,3 +122,15 @@ async def run_augmentation(
         response["warning"] = warning
 
     return response
+
+
+@augmentation_router.post("/stop")
+async def stop_augmentation():
+    """
+    Signal a running augmentation to stop as soon as possible.
+
+    Returns:
+        dict: Confirmation that the stop signal was sent.
+    """
+    AugmentationService.request_stop()
+    return {"status": "stopping", "service": "augmentation"}

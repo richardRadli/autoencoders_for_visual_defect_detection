@@ -1,5 +1,7 @@
 import logging
 import os
+import threading
+import json
 import cv2
 import numpy as np
 
@@ -11,7 +13,7 @@ from typing import List, Tuple
 
 from shared.core.path_bindings import dataset_paths
 from services.data_operations.app.core.aug_config_service import AugmentationConfig
-from utils.utils import file_reader, resolve_num_workers
+from utils.system_utils import file_reader, resolve_num_workers, create_timestamp
 
 
 @dataclass
@@ -23,10 +25,19 @@ class AugmentationResult:
     target_dir: Path
     source_images: int
     augmented_images: int
+    processed_images: int
+    stopped: bool
 
 
 class AugmentationService:
     """Generate base crops and count-based augmented images for one dataset."""
+
+    _stop_event = threading.Event()
+
+    @staticmethod
+    def request_stop() -> None:
+        """Signal the running augmentation to stop as soon as possible."""
+        AugmentationService._stop_event.set()
 
     @staticmethod
     def _distribute(count: int, num_imgs: int) -> List[int]:
@@ -223,13 +234,14 @@ class AugmentationService:
         return replace(config, **active)
 
     @staticmethod
-    def run(dataset_type: str, config: AugmentationConfig, overrides: dict | None = None) -> AugmentationResult:
+    def run(dataset_type: str, config: AugmentationConfig, request_params: dict, overrides: dict | None = None) -> AugmentationResult:
         """
         Generate the base crops and the count-based augmented set for a dataset.
 
         Args:
             dataset_type: Selected dataset name.
             config: Loaded augmentation configuration.
+            request_params: Query parameters of the run, saved into params.json.
             overrides: Optional per-operation count overrides from the request.
 
         Returns:
@@ -237,10 +249,12 @@ class AugmentationService:
         """
         config = AugmentationService._apply_overrides(config, overrides)
 
+        AugmentationService._stop_event.clear()
+
         paths = dataset_paths(dataset_type)
         source_dir = paths["good"]
-        target_dir = paths["aug"]
-        target_dir.mkdir(parents=True, exist_ok=True)
+        target_dir = paths["aug"] / create_timestamp()
+        os.makedirs(target_dir, exist_ok=True)
 
         image_paths = file_reader(str(source_dir), "png", "jpg")
         num_imgs = len(image_paths)
@@ -253,6 +267,8 @@ class AugmentationService:
 
         num_workers = resolve_num_workers(config.num_workers)
 
+        processed = 0
+        stopped = False
         with ProcessPoolExecutor(max_workers=num_workers) as executor:
             futures = [
                 executor.submit(
@@ -268,13 +284,32 @@ class AugmentationService:
             ]
 
             for future in tqdm(futures, total=len(futures), desc="Augmenting images"):
+                if AugmentationService._stop_event.is_set():
+                    stopped = True
+                    for f in futures:
+                        f.cancel()
+                    break
                 future.result()
+                processed += 1
 
         total_aug = config.rotate_count + config.horizontal_flip_count + config.vertical_flip_count
+
+        run_log = {
+            "params": request_params,
+            "result": {
+                "stopped": stopped,
+                "processed_images": processed,
+                "augmented_images": total_aug,
+            },
+        }
+        with open(target_dir / "params.json", "w", encoding="utf-8") as f:
+            json.dump(run_log, f, indent=2)
+
         logging.info(
-            f"Dataset {dataset_type}: {num_imgs} base crops, "
-            f"{config.rotate_count} rotate, {config.horizontal_flip_count} hflip, "
-            f"{config.vertical_flip_count} vflip ({total_aug} augmented total)"
+            f"Dataset {dataset_type}: {'STOPPED after' if stopped else 'finished'} "
+            f"{processed}/{num_imgs} source images "
+            f"({config.rotate_count} rotate, {config.horizontal_flip_count} hflip, "
+            f"{config.vertical_flip_count} vflip; {total_aug} augmented planned)"
         )
 
         return AugmentationResult(
@@ -283,4 +318,6 @@ class AugmentationService:
             target_dir=target_dir,
             source_images=num_imgs,
             augmented_images=total_aug,
+            processed_images=processed,
+            stopped=stopped,
         )

@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from config.dataset_config import dataset_images_path_selector
 from config.json_config import json_config_selector
-from utils.utils import load_config_json
+from utils.system_utils import load_config_json
 
 
 def generate_image_list(train_data_dir: str, augment_num: int) -> List[Tuple[str, int]]:

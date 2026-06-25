@@ -16,9 +16,9 @@ from config.network_config import network_configs
 from config.json_config import json_config_selector
 from config.dataset_config import dataset_data_path_selector, dataset_images_path_selector
 from models.network_selector import NetworkFactory
-from utils.utils import (setup_logger, device_selector, get_patch, patch2img, set_img_color, avg_of_list,
-                         find_latest_file_in_latest_directory, create_save_dirs, create_timestamp, load_config_json,
-                         file_reader, save_list_to_json)
+from utils.system_utils import (setup_logger, device_selector, get_patch, patch2img, set_img_color, avg_of_list,
+                                find_latest_file_in_latest_directory, create_save_dirs, create_timestamp, load_config_json,
+                                file_reader, save_list_to_json)
 
 
 class TestAutoEncoder:

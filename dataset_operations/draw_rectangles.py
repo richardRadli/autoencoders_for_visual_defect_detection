@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from config.dataset_config import dataset_images_path_selector
 from config.json_config import json_config_selector
-from utils.utils import load_config_json, file_reader
+from utils.system_utils import load_config_json, file_reader
 
 
 def process_image(image_path: str, path_covered: str, cfg) -> None:

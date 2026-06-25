@@ -18,7 +18,7 @@ from dataloaders.data_loader_ae import MVTecDataset
 from dataloaders.data_loader_dae import MVTecDatasetDenoising
 from models.network_selector import NetworkFactory
 from typing import Tuple
-from utils.utils import create_timestamp, device_selector, setup_logger, get_loss_function, create_save_dirs, \
+from utils.system_utils import create_timestamp, device_selector, setup_logger, get_loss_function, create_save_dirs, \
     visualize_images, load_config_json, set_seed
 
 

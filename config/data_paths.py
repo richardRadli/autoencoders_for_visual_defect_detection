@@ -1,7 +1,7 @@
 import logging
 import os
 
-from utils.utils import setup_logger
+from utils.system_utils import setup_logger
 
 
 class _Const(object):

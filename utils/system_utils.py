@@ -1,25 +1,16 @@
 import colorlog
 import cv2
-import gc
 import json
-import jsonschema
 import logging
-import matplotlib.pyplot as plt
 import numpy as np
 import os
-import pandas as pd
 import re
 import time
-import torch
-import torch.nn as nn
-import torchvision
 
 from datetime import datetime
 from functools import wraps
-from jsonschema import validate
 from pathlib import Path
-from pytorch_msssim import SSIM
-from typing import Any, Callable, Optional, List, Union
+from typing import Any, Callable, List, Union
 
 
 def setup_logger():
@@ -63,41 +54,6 @@ def setup_logger():
 
     return logger
 
-
-def device_selector(preferred_device: str) -> torch.device:
-    """
-    Provides information about the currently available GPUs and returns a torch device for training and inference.
-
-    Args:
-        preferred_device: A torch device for either "cuda" or "cpu".
-
-    Returns:
-        torch.device: A torch.device object representing the selected device for training and inference.
-    """
-
-    if preferred_device not in ["cuda", "cpu"]:
-        logging.warning("Preferred device is not valid. Using CPU instead.")
-        return torch.device("cpu")
-
-    if preferred_device == "cuda" and torch.cuda.is_available():
-        cuda_info = {
-            'CUDA Available': [torch.cuda.is_available()],
-            'CUDA Device Count': [torch.cuda.device_count()],
-            'Current CUDA Device': [torch.cuda.current_device()],
-            'CUDA Device Name': [torch.cuda.get_device_name(0)]
-        }
-
-        df = pd.DataFrame(cuda_info)
-        logging.info(df)
-        return torch.device("cuda")
-
-    if preferred_device in ["cuda"] and not torch.cuda.is_available():
-        logging.info("Only CPU is available!")
-        return torch.device("cpu")
-
-    if preferred_device == "cpu":
-        logging.info("Selected CPU device")
-        return torch.device("cpu")
 
 
 def create_timestamp() -> str:
@@ -203,7 +159,7 @@ def file_reader(file_path: str, extension: str, extension2: str = None):
 
     Args:
         file_path (str): Path to the directory.
-        extension1 (str): Primary file extension to search for.
+        extension (str): Primary file extension to search for.
         extension2 (str | None): Secondary file extension to search for if no files are found with primary.
 
     Returns:
@@ -263,6 +219,31 @@ def find_latest_file_in_latest_directory(path: str) -> str:
 
     return latest_file
 
+def find_latest_directory(path: str) -> str:
+    """
+    Find the most recently modified subdirectory within the given path.
+
+    Args:
+        path (str): Directory to search for subdirectories.
+
+    Returns:
+        str: Path to the latest subdirectory.
+
+    Raises:
+        ValueError: If no subdirectories are found.
+    """
+
+    dirs = [os.path.join(path, d) for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
+
+    if not dirs:
+        raise ValueError(f"No directories found in {path}")
+
+    dirs.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    latest_dir = dirs[0]
+    logging.info(f"The latest directory is {latest_dir}")
+
+    return latest_dir
+
 
 def measure_execution_time(func: Callable) -> Callable:
     """
@@ -299,78 +280,6 @@ def measure_execution_time(func: Callable) -> Callable:
     return wrapper
 
 
-def visualize_images(
-    clean_images: torch.Tensor, outputs: torch.Tensor, epoch: int, batch_idx: int, dir_path: str,
-        noise_images: Optional[torch.Tensor] = None) -> None:
-    """
-    Visualize and save images for inspection.
-
-        clean_images: Tensor containing clean images.
-        outputs: Tensor containing reconstructed images.
-        epoch: Current epoch number.
-        batch_idx: Current batch index.
-        dir_path: Directory path to save the visualization.
-        noise_images: Optional tensor containing noisy images.
-    Returns: None
-    """
-
-    filename = os.path.join(dir_path, f"{epoch}_{batch_idx}.png")
-
-    clean_images_grid = torchvision.utils.make_grid(clean_images.cpu(), nrow=8, normalize=True)
-    noise_images_grid = None
-    if noise_images is not None:
-        noise_images_grid = torchvision.utils.make_grid(noise_images.cpu(), nrow=8, normalize=True)
-    outputs_grid = torchvision.utils.make_grid(outputs.cpu(), nrow=8, normalize=True)
-
-    plt.figure(figsize=(15, 5))  # Adjust the figsize to fit horizontally
-
-    num_of_plots = 2 if noise_images is None else 3
-
-    plt.subplot(1, num_of_plots, 1)
-    plt.imshow(clean_images_grid.permute(1, 2, 0))
-    plt.title(f'Clean Images - Epoch {epoch}, Batch {batch_idx}')
-    plt.axis('off')  # Optional: hide the axes for better visualization
-
-    if noise_images is not None:
-        plt.subplot(1, num_of_plots, 2)
-        plt.imshow(noise_images_grid.permute(1, 2, 0))
-        plt.title(f'Noisy Images - Epoch {epoch}, Batch {batch_idx}')
-        plt.axis('off')  # Optional: hide the axes for better visualization
-
-    plt.subplot(1, num_of_plots, num_of_plots)
-    plt.imshow(outputs_grid.permute(1, 2, 0))
-    plt.title(f'Reconstructed Images - Epoch {epoch}, Batch {batch_idx}')
-    plt.axis('off')  # Optional: hide the axes for better visualization
-
-    plt.tight_layout()  # Adjust layout to prevent overlap
-    plt.savefig(filename, dpi=300)
-    plt.close()
-    gc.collect()
-
-
-def get_loss_function(loss_function_type: str, grayscale=None):
-    """
-    Get the loss function based on the provided loss function type.
-
-    Args:
-        loss_function_type: String specifying the type of loss function ("mse" or "ssim").
-        grayscale: Optional boolean specifying whether to use grayscale or not.
-
-    Returns:
-         Loss function instance.
-    """
-
-    loss_functions = {
-        "mse": nn.MSELoss(),
-        "ssim": SSIM(win_sigma=1.5, data_range=1, size_average=True, channel=1 if grayscale else 3),
-    }
-
-    if loss_function_type in loss_functions:
-        return loss_functions[loss_function_type]
-    else:
-        raise ValueError(f"Wrong loss function type {loss_function_type}")
-
-
 def create_save_dirs(directory_path: str, network_type: str, timestamp: str) -> str:
     """
     Create and return a directory path based on input parameters.
@@ -404,31 +313,6 @@ def avg_of_list(my_list):
 
     return sum(my_list) / len(my_list)
 
-
-def load_config_json(json_schema_filename: str, json_filename: str):
-    """
-    Args:
-        json_schema_filename:
-        json_filename:
-
-    Returns:
-
-    """
-
-    with open(json_schema_filename, "r") as schema_file:
-        schema = json.load(schema_file)
-
-    with open(json_filename, "r") as config_file:
-        config = json.load(config_file)
-
-    try:
-        validate(config, schema)
-        logging.info("JSON data is valid.")
-        return config
-    except jsonschema.exceptions.ValidationError as err:
-        logging.error(f"JSON data is invalid: {err}")
-
-
 def save_list_to_json(filename: str, results_dict: dict) -> None:
     """
     Save metrics to a JSON file.
@@ -444,14 +328,4 @@ def save_list_to_json(filename: str, results_dict: dict) -> None:
         json.dump(results_dict, json_file, indent=4)
 
 
-def set_seed(seed):
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
 
-    # If running on the CuDNN backend
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
-    # Set a fixed value for the hash seed
-    os.environ['PYTHONHASHSEED'] = str(seed)
