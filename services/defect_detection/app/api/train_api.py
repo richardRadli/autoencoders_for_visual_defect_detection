@@ -3,7 +3,7 @@ import logging
 from enum import Enum
 from fastapi import APIRouter, Query
 
-from services.defect_detection.app.core.training_config_service import TrainingConfigService
+from services.defect_detection.app.core import TrainingConfigService
 from shared.core.enums import DatasetType
 from shared.core.path_bindings import config_paths
 
