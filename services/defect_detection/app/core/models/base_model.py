@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from models.model import AutoEncoder
+from services.defect_detection.app.core.models.model import AutoEncoder
 
 
 class BaseAutoEncoder(AutoEncoder):

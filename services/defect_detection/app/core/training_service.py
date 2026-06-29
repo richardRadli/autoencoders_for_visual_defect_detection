@@ -10,6 +10,8 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 from torchinfo import summary
+from pytorch_msssim import SSIM
+
 
 from config.network_config import network_configs
 from config.dataset_config import dataset_images_path_selector, dataset_data_path_selector
@@ -18,8 +20,9 @@ from dataloaders.data_loader_ae import MVTecDataset
 from dataloaders.data_loader_dae import MVTecDatasetDenoising
 from models.network_selector import NetworkFactory
 from typing import Tuple
-from utils.system_utils import create_timestamp, device_selector, setup_logger, get_loss_function, create_save_dirs, \
-    visualize_images, load_config_json, set_seed
+from utils.system_utils import create_timestamp, setup_logger, create_save_dirs
+from utils.ml_utils import device_selector, visualize_images, set_seed
+
 
 
 class TrainAutoEncoder:
@@ -79,12 +82,8 @@ class TrainAutoEncoder:
         self.train_dataloader, self.valid_dataloader = self.create_dataset()
 
         # Setup loss function, optimizer, LR scheduler
-        self.criterion = (
-            get_loss_function(
-                loss_function_type=self.train_cfg.get("loss_function_type"),
-                grayscale=self.train_cfg.get("grayscale"),
-            )
-        )
+
+        self.criterion = SSIM(win_sigma=1.5, data_range=1, size_average=True, channel=1 if grayscale else 3)
 
         self.optimizer = (
             optim.Adam(
@@ -109,7 +108,7 @@ class TrainAutoEncoder:
                 timestamp=self.timestamp
             )
         )
-
+        
         self.writer = (
             SummaryWriter(
                 log_dir=str(tensorboard_log_dir)

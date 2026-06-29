@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from models.base_model import BaseAutoEncoder
-from models.extended_model import ExtendedAutoEncoder
+from services.defect_detection.app.core.models.base_model import BaseAutoEncoder
+from services.defect_detection.app.core.models.extended_model import ExtendedAutoEncoder
 
 
 class BaseNetwork(ABC):

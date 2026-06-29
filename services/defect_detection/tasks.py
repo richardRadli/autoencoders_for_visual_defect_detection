@@ -27,7 +27,7 @@ def train_autoencoder_task(self, config: dict):
     """
     Background autoencoder training task. Skeleton only — the real training
     (model build via NetworkFactory, dataset load, early stopping, per-epoch
-    progress, best-weight saving) is brought over from src/train.py on Monday.
+    progress, best-weight saving) is brought over from src/training_service.py on Monday.
 
     Args:
         self: Bound Celery task instance (used for progress updates).
