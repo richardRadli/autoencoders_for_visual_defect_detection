@@ -3,3 +3,10 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+dataset/
+storage/**/model_weights/
+storage/**/training_vis/
+storage/**/logs/
+storage/**/metrics/
+storage/**/roc_plot/
+storage/**/reconstruction*/

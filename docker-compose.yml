@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - /media/ssd_storage/Personal/Toth_Balint/datasets:/app/dataset
+      - ./dataset:/app/dataset
       - ./storage:/app/storage
     environment:
       - DATASET_ROOT=/app/dataset
@@ -21,7 +21,7 @@ services:
     ports:
       - "8001:8000"
     volumes:
-      - /media/ssd_storage/Personal/Toth_Balint/datasets:/app/dataset
+      - ./dataset:/app/dataset
       - ./storage:/app/storage
     environment:
       - DATASET_ROOT=/app/dataset
@@ -51,7 +51,7 @@ services:
     container_name: defect_detection_worker
     command: celery -A services.defect_detection.tasks.celery_app worker --loglevel=info -c 1
     volumes:
-      - /media/ssd_storage/Personal/Toth_Balint/datasets:/app/dataset
+      - ./dataset:/app/dataset
       - ./storage:/app/storage
     environment:
       - DATASET_ROOT=/app/dataset

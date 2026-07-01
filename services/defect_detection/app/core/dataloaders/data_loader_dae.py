@@ -27,7 +27,6 @@ class MVTecDatasetDenoising(Dataset):
             self.transform = transforms.Compose([
                 transforms.Grayscale(num_output_channels=1),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
         else:
             self.transform = transforms.Compose([
