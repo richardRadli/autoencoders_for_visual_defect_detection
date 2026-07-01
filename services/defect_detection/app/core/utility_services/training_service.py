@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, random_split
 from pytorch_msssim import SSIM
 from typing import Tuple
 
-from utility_services.config_service.architecture_config_service import ArchitectureConfigService
+from services.defect_detection.app.core.utility_services.config_service.architecture_config_service import ArchitectureConfigService
 from services.defect_detection.app.core.dataloaders.data_loader_ae import MVTecDataset
 from services.defect_detection.app.core.dataloaders.data_loader_dae import MVTecDatasetDenoising
 from services.defect_detection.app.core.models.network_selector import NetworkFactory
