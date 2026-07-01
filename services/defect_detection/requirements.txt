@@ -3,5 +3,9 @@ uvicorn[standard]
 opencv-python-headless
 colorlog
 tqdm
+jsonschema
 celery[redis]
-
+pytorch-msssim
+matplotlib
+pandas
+Pillow

@@ -26,7 +26,41 @@ services:
     environment:
       - DATASET_ROOT=/app/dataset
       - STORAGE_ROOT=/app/storage
+      - CELERY_BROKER_URL=redis://redis_broker:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis_broker:6379/0
     shm_size: "16gb"
+    depends_on:
+      - redis_broker
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  redis_broker:
+    image: redis:7-alpine
+    container_name: defect_detection_redis
+    restart: unless-stopped
+
+  defect_detection_worker:
+    build:
+      context: .
+      dockerfile: services/defect_detection/Dockerfile
+    container_name: defect_detection_worker
+    command: celery -A services.defect_detection.tasks.celery_app worker --loglevel=info -c 1
+    volumes:
+      - /media/ssd_storage/Personal/Toth_Balint/datasets:/app/dataset
+      - ./storage:/app/storage
+    environment:
+      - DATASET_ROOT=/app/dataset
+      - STORAGE_ROOT=/app/storage
+      - CELERY_BROKER_URL=redis://redis_broker:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis_broker:6379/0
+    shm_size: "16gb"
+    depends_on:
+      - redis_broker
     deploy:
       resources:
         reservations:

@@ -3,9 +3,10 @@ import logging
 from enum import Enum
 from fastapi import APIRouter, Query
 
-from services.defect_detection.app.core import TrainingConfigService
+from services.defect_detection.app.core.utility_services.training_config_service import TrainingConfigService
 from shared.core.enums import DatasetType
 from shared.core.path_bindings import config_paths
+from services.defect_detection.tasks import celery_app, train_autoencoder_task
 
 
 train_router = APIRouter(
@@ -120,10 +121,28 @@ async def run_training(
         "seed": config.seed if seed is None else seed,
     }
 
-    logging.info(f"Resolved training setup: {effective_config}")
+    task = train_autoencoder_task.delay(effective_config)
+    logging.info(f"Queued training task {task.id}")
 
-    return {
-        "status": "not_implemented",
-        "message": "Training is not wired yet — this only resolves the config. Background task comes later.",
-        "effective_config": effective_config,
-    }
+    return {"task_id": task.id, "status": "QUEUED"}
+
+@train_router.get("/status/{task_id}")
+async def get_training_status(task_id: str):
+    """
+    Return the state and progress/result of a training task.
+
+    Args:
+        task_id: The Celery task id returned by /train/run.
+
+    Returns:
+        dict: The task state and its progress info or final result.
+    """
+    result = celery_app.AsyncResult(task_id)
+    response = {"task_id": task_id, "status": result.state, "info": None}
+    if result.state == "PROGRESS":
+        response["info"] = result.info
+    elif result.state == "SUCCESS":
+        response["info"] = result.get()
+    elif result.state == "FAILURE":
+        response["info"] = str(result.info)
+    return response
