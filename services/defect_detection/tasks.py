@@ -30,13 +30,8 @@ def train_autoencoder_task(self, config: dict):
         config: Effective training config from the API.
 
     Returns:
-        dict: The training result summary.
+        dict: The training result summary (status, best valid loss, weights path).
     """
     logging.info("Starting autoencoder training task")
     self.update_state(state="PROGRESS", meta={"status": "Training in progress"})
-    try:
-        return TrainAutoEncoder(config).fit()
-    except Exception as e:
-        logging.exception("Training task failed")
-        self.update_state(state="FAILURE", meta={"error": str(e)})
-        raise
+    return TrainAutoEncoder(config).fit()

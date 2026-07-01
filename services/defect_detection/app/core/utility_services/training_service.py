@@ -17,7 +17,7 @@ from services.defect_detection.app.core.dataloaders.data_loader_dae import MVTec
 from services.defect_detection.app.core.models.network_selector import NetworkFactory
 from shared.core.path_bindings import config_paths, dataset_paths, training_testing_paths
 from utils.ml_utils import device_selector, set_seed, visualize_images
-from utils.system_utils import create_save_dirs, create_timestamp, setup_logger
+from utils.system_utils import create_save_dirs, create_timestamp, find_latest_directory, setup_logger
 
 
 class TrainAutoEncoder:
@@ -86,14 +86,16 @@ class TrainAutoEncoder:
             tuple: The training and validation DataLoaders.
         """
         paths = dataset_paths(self.dataset_type)
+        aug_dir = find_latest_directory(str(paths["aug"]))
 
         if self.network_type in ["AE", "AEE"]:
             dataset = MVTecDataset(
-                root_dir=str(paths["aug"]), grayscale=self.train_cfg.get("grayscale")
+                root_dir=aug_dir, grayscale=self.train_cfg.get("grayscale")
             )
         else:
+            noise_dir = find_latest_directory(str(paths["noise"]))
             dataset = MVTecDatasetDenoising(
-                root_dir=str(paths["aug"]), noise_dir=str(paths["noise"]),
+                root_dir=aug_dir, noise_dir=noise_dir,
                 grayscale=self.train_cfg.get("grayscale"),
             )
 

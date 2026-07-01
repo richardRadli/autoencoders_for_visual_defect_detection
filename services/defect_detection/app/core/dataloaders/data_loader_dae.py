@@ -10,19 +10,29 @@ class MVTecDatasetDenoising(Dataset):
     def __init__(self, root_dir, noise_dir, grayscale):
         self.root_dir = root_dir
         self.noise_dir = noise_dir
-        self.image_files = sorted([os.path.join(root_dir, filename) for filename in os.listdir(root_dir)])
-        self.noise_files = sorted([os.path.join(noise_dir, filename) for filename in os.listdir(noise_dir)])
+        self.image_files = sorted(
+            os.path.join(root_dir, filename)
+            for filename in os.listdir(root_dir)
+            if filename.lower().endswith((".png", ".jpg", ".jpeg"))
+        )
+        self.noise_files = sorted(
+            os.path.join(noise_dir, filename)
+            for filename in os.listdir(noise_dir)
+            if filename.lower().endswith((".png", ".jpg", ".jpeg"))
+        )
 
         assert len(self.image_files) == len(self.noise_files), "Number of image files and noise files must be the same"
 
         if grayscale:
             self.transform = transforms.Compose([
                 transforms.Grayscale(num_output_channels=1),
-                transforms.ToTensor()
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
         else:
             self.transform = transforms.Compose([
                 transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             ])
 
     def __len__(self):
