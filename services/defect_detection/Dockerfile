@@ -1,9 +1,13 @@
 FROM pytorch/pytorch:2.6.0-cuda12.6-cudnn9-runtime
 
+ENV DEBIAN_FRONTEND=noniteractive
+ENV TZ=Europe/Budapest
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libgl1-mesa-glx \
     libglib2.0-0 \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
