@@ -1,12 +1,13 @@
 import logging
 
 from enum import Enum
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, status
 
 from services.defect_detection.app.core.utility_services.training_config_service import TrainingConfigService
 from shared.core.enums import DatasetType
 from shared.core.path_bindings import config_paths
 from services.defect_detection.tasks import celery_app, train_autoencoder_task
+
 
 
 train_router = APIRouter(
@@ -146,3 +147,26 @@ async def get_training_status(task_id: str):
     elif result.state == "FAILURE":
         response["info"] = str(result.info)
     return response
+
+@train_router.post("/stop/{task_id}")
+async def stop_training(task_id: str):
+    """
+    Stop a running training task.
+
+    Args:
+        task_id: The Celery task id returned by /train/run.
+
+    Returns:
+        dict: Confirmation that the stop signal was sent.
+    """
+    try:
+        celery_app.control.revoke(task_id, terminate=True, signal="SIGKILL")
+        return {
+            "status": "ABORTED",
+            "message": f"Task {task_id} has been stopped"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to stop task {task_id} due to {e}"
+        )
