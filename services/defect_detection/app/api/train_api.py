@@ -3,7 +3,7 @@ import logging
 from enum import Enum
 from fastapi import APIRouter, HTTPException, Query, status
 
-from services.defect_detection.app.core.utility_services.training_config_service import TrainingConfigService
+from utility_services.config_service.training_config_service import TrainingConfigService
 from shared.core.enums import DatasetType
 from shared.core.path_bindings import config_paths
 from services.defect_detection.tasks import celery_app, train_autoencoder_task

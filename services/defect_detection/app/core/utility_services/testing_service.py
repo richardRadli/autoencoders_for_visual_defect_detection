@@ -51,11 +51,7 @@ class TestAutoEncoder:
             else self.test_cfg.get("img_size")[0]
 
         # Select device to use
-        self.device = (
-            device_selector(
-                self.test_cfg.get("device")
-            )
-        )
+        self.device = device_selector(preferred_device="cuda")
 
         # Load model
         self.model = (
