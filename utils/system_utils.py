@@ -191,13 +191,20 @@ def resolve_num_workers(config_num_workers: int) -> int:
 
     return max(config_num_workers, os.cpu_count() or 1)
 
-def find_latest_file_in_latest_directory(path: str) -> str:
+def find_latest_file_in_latest_directory(path: str, extension: str | None = None) -> str:
     """
     Finds the latest file in the latest directory within the given path.
 
-        path: str, the path to the directory where we should look for the latest file
-    Returns: str, the path to the latest file
-    :raise: when no directories or files found
+    Args:
+        path: The path to the directory where we should look for the latest file.
+        extension: Optional extension filter (e.g. ".pt"); if given, only files
+            ending with it are considered.
+
+    Returns:
+        str: The path to the latest file.
+
+    Raises:
+        ValueError: When no directories or matching files are found.
     """
 
     dirs = [os.path.join(path, d) for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
@@ -207,8 +214,9 @@ def find_latest_file_in_latest_directory(path: str) -> str:
 
     dirs.sort(key=lambda x: os.path.getmtime(x), reverse=True)
     latest_dir = dirs[0]
-    files = [os.path.join(latest_dir, f) for f in os.listdir(latest_dir) if
-             os.path.isfile(os.path.join(latest_dir, f))]
+    files = [os.path.join(latest_dir, f) for f in os.listdir(latest_dir)
+             if os.path.isfile(os.path.join(latest_dir, f))
+             and (extension is None or f.endswith(extension))]
 
     if not files:
         raise ValueError(f"No files found in {latest_dir}")
