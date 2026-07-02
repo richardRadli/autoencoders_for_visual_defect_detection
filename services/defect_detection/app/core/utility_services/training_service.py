@@ -17,7 +17,7 @@ from services.defect_detection.app.core.dataloaders.data_loader_dae import MVTec
 from services.defect_detection.app.core.models.network_selector import NetworkFactory
 from shared.core.path_bindings import config_paths, dataset_paths, training_testing_paths
 from utils.ml_utils import device_selector, set_seed, visualize_images
-from utils.system_utils import create_save_dirs, create_timestamp, find_latest_directory, setup_logger
+from utils.system_utils import create_save_dirs, create_timestamp, find_latest_directory, save_list_to_json, setup_logger
 
 
 class TrainAutoEncoder:
@@ -77,6 +77,10 @@ class TrainAutoEncoder:
             network_type=self.network_type,
             timestamp=self.timestamp,
         )
+
+        params_path = os.path.join(str(self.save_path), "params.json")
+        save_list_to_json(filename= params_path, results_dict=self.train_cfg)
+        logging.info(f"Saved training params to {params_path}")
 
     def create_dataset(self) -> Tuple[DataLoader, DataLoader]:
         """

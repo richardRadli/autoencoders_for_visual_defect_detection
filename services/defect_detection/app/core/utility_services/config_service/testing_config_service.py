@@ -26,7 +26,7 @@ class TestingConfigService:
     def load(base_path: str) -> TestingConfig:
         base_path = str(base_path)
         if os.path.isdir(base_path):
-            target_file = os.path.join(base_path, "training_config.json")
+            target_file = os.path.join(base_path, "testing_config.json")
         elif not base_path.endswith(".json"):
             target_file = f"{base_path}.json"
         else:
@@ -36,7 +36,7 @@ class TestingConfigService:
             with open(target_file, "r", encoding="utf-8") as f:
                 data: Dict[str, Any] = json.load(f)
 
-            training_config = TestingConfig(
+            testing_config = TestingConfig(
                 network_type=data["network_type"],
                 dataset_type=data["dataset_type"],
                 subtest_folder=data["subtest_folder"],
@@ -52,7 +52,7 @@ class TestingConfigService:
             )
 
             logging.info(f"Loaded testing config from: {target_file}")
-            return training_config
+            return testing_config
 
         except KeyError as e:
             logging.error(f"Missing config field: {e}")
