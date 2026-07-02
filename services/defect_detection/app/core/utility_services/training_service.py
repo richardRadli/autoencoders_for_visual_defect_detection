@@ -78,9 +78,12 @@ class TrainAutoEncoder:
             timestamp=self.timestamp,
         )
 
-        params_path = os.path.join(str(self.save_path), "params.json")
-        save_list_to_json(filename= params_path, results_dict=self.train_cfg)
-        logging.info(f"Saved training params to {params_path}")
+        self.params_path = os.path.join(str(self.save_path), "params.json")
+        save_list_to_json(
+            filename=self.params_path,
+            results_dict={**self.train_cfg, "last_completed_epoch": 0},
+        )
+        logging.info(f"Saved training params to {self.params_path}")
 
     def create_dataset(self) -> Tuple[DataLoader, DataLoader]:
         """
@@ -237,6 +240,11 @@ class TrainAutoEncoder:
             train_losses.clear()
             valid_losses.clear()
 
+            save_list_to_json(
+                filename=self.params_path,
+                results_dict={**self.train_cfg, "last_completed_epoch": epoch+1},
+            )
+
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
                 if best_model_path is not None:
@@ -251,7 +259,6 @@ class TrainAutoEncoder:
                 if early_stopping_counter >= self.train_cfg.get("early_stopping"):
                     logging.info(f"Early stopping at epoch {epoch}")
                     break
-
         return {
             "status": "DONE",
             "network_type": self.network_type,
