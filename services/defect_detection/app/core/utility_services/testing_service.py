@@ -1,5 +1,6 @@
 import cv2
 import gc
+import json
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,213 +13,195 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
 
-from config.network_config import network_configs
-from config.json_config import json_config_selector
-from config.dataset_config import dataset_data_path_selector, dataset_images_path_selector
-from models.network_selector import NetworkFactory
-from utils.system_utils import (setup_logger, device_selector, get_patch, patch2img, set_img_color, avg_of_list,
-                                find_latest_file_in_latest_directory, create_save_dirs, create_timestamp, load_config_json,
+from services.defect_detection.app.core.utility_services.config_service.architecture_config_service import ArchitectureConfigService
+from services.defect_detection.app.core.models.network_selector import NetworkFactory
+from shared.core.path_bindings import config_paths, dataset_paths, training_testing_paths
+from utils.ml_utils import device_selector
+from utils.system_utils import (setup_logger, get_patch, patch2img, set_img_color, avg_of_list,
+                                find_latest_file_in_latest_directory, create_save_dirs, create_timestamp,
                                 file_reader, save_list_to_json)
 
 
 class TestAutoEncoder:
-    def __init__(self):
-        timestamp = create_timestamp()
-        self.logger = setup_logger()
-
-        train_cfg = (
-            load_config_json(
-                json_schema_filename=json_config_selector("training")["schema"],
-                json_filename=json_config_selector("training")["config"]
-            )
-        )
-
-        self.test_cfg = (
-            load_config_json(
-                json_schema_filename=json_config_selector("testing")["schema"],
-                json_filename=json_config_selector("testing")["config"]
-            )
-        )
-
-        self.network_type = self.test_cfg.get("network_type")
-        network_cfg = network_configs(train_cfg).get(self.network_type)
-        self.dataset_type = self.test_cfg.get("dataset_type")
-        subtest_folder = self.test_cfg.get("subtest_folder")
-        self.grayscale = self.test_cfg.get("grayscale")
-
-        self.mask_size = self.test_cfg.get("patch_size") \
-            if self.test_cfg.get("img_size")[0] - self.test_cfg.get("crop_size")[0] < self.test_cfg.get("stride") \
-            else self.test_cfg.get("img_size")[0]
-
-        # Select device to use
-        self.device = device_selector(preferred_device="cuda")
-
-        # Load model
-        self.model = (
-            self.load_model(
-                network_cfg
-            )
-        )
-
-        # Load paths
-        train_dataset_path = (
-            dataset_images_path_selector().get(self.dataset_type).get("train")
-        )
-        self.train_images = (
-            file_reader(
-                file_path=train_dataset_path,
-                extension="png"
-            )
-        )
-
-        if not self.test_cfg.get("vis_reconstruction"):
-            test_path = (
-                dataset_images_path_selector().get(self.dataset_type).get("test").get(subtest_folder)
-            )
-            test_images_path = (
-                test_path.get("test_images")
-            )
-            self.test_images = (
-                file_reader(test_images_path, "png")
-            )
-
-            gt_images_path = (
-                test_path.get("ground_truth")
-            )
-            self.gt_images = (
-                file_reader(gt_images_path, "png")
-            )
-
-            self.cached_gt_images = (
-                self.ground_truth_caching()
-            )
-
-            roc_dir = (
-                dataset_data_path_selector().get(self.dataset_type).get("roc_plot")
-            )
-            self.save_roc_plot_dir = (
-                create_save_dirs(
-                    directory_path=roc_dir,
-                    network_type=self.network_type,
-                    timestamp=timestamp
-                )
-            )
-
-            metrics_dir = (
-                dataset_data_path_selector().get(self.dataset_type).get("metrics")
-            )
-            self.metrics_save_dir = (
-                create_save_dirs(
-                    directory_path=metrics_dir,
-                    network_type=self.network_type,
-                    timestamp=timestamp
-                )
-            )
-
-            if self.test_cfg.get("vis_results"):
-                rec_vis_dir = (
-                    dataset_data_path_selector().get(self.dataset_type).get("reconstruction_vis_images")
-                )
-                self.save_reconstruction_plot_dir = (
-                    create_save_dirs(
-                        directory_path=rec_vis_dir,
-                        network_type=self.network_type,
-                        timestamp=timestamp
-                    )
-                )
-
-        else:
-            rec_dir = (
-                dataset_data_path_selector().get(self.dataset_type).get("reconstruction_images")
-            )
-            self.save_reconstruction_dir = (
-                create_save_dirs(
-                    directory_path=rec_dir,
-                    network_type=self.network_type,
-                    timestamp=timestamp
-                )
-            )
-
-    def load_model(self, network_cfg):
+    def __init__(self, config: dict):
         """
+        Set up the model, data and output dirs for one evaluation run.
 
         Args:
-            network_cfg:
-
-        Returns:
-
+            config: Effective testing config (already resolved by the API).
         """
+        self.timestamp = create_timestamp()
+        setup_logger()
 
-        # Load the model and the latest weights
-        model = (
-            NetworkFactory.create_network(
-                network_type=self.network_type,
-                network_cfg=network_cfg)
-        ).to(self.device)
+        self.test_cfg = config
 
-        state_dict = torch.load(
-            find_latest_file_in_latest_directory(
-                path=str(os.path.join(
-                    dataset_data_path_selector().get(self.dataset_type).get("model_weights_dir"),
-                    self.network_type)
-                )
-            )
+        self.network_type = self.test_cfg.get("network_type")
+        self.dataset_type = self.test_cfg.get("dataset_type")
+        self.subtest_folder = self.test_cfg.get("subtest_folder")
+
+        self.img_size = self.test_cfg.get("img_size")
+        self.crop_size = self.test_cfg.get("crop_size")
+        self.stride = self.test_cfg.get("stride")
+        self.mask_size = self.img_size
+
+        if self.network_type not in ["AE", "AEE", "DAE", "DAEE"]:
+            raise ValueError(f"wrong network type: {self.network_type}")
+
+        self.device = device_selector(preferred_device="cuda")
+
+        weights_root = os.path.join(
+            str(training_testing_paths(self.dataset_type)["model_weights"]), self.network_type
         )
 
+        if not os.path.isdir(weights_root):
+            raise ValueError(f"No trained weights found for {self.network_type} / {self.dataset_type}")
+        try:
+            self.weights_path = find_latest_file_in_latest_directory(path=weights_root, extension=".pt")
+        except ValueError:
+            raise ValueError(f"No trained weights found for {self.network_type} / {self.dataset_type}")
+
+        train_params = self.load_train_params(os.path.dirname(self.weights_path))
+        self.grayscale = train_params["grayscale"]
+
+        network_cfg = ArchitectureConfigService.build(
+            base_path=config_paths().get("network_config"),
+            network_type=self.network_type,
+            grayscale=self.grayscale,
+            latent_space_dimension=train_params["latent_space_dimension"],
+        )
+
+        self.model = self.load_model(network_cfg)
+
+        paths = dataset_paths(self.dataset_type)
+        self.train_images = file_reader(file_path=str(paths["good"]), extension="png", extension2="jpg")
+        if not self.train_images:
+            raise ValueError(f"No training images found in {paths['good']}")
+
+        if not self.test_cfg.get("vis_reconstruction"):
+            if self.subtest_folder not in paths["test"]:
+                raise ValueError(
+                    f"Invalid subtest_folder '{self.subtest_folder}' for dataset '{self.dataset_type}'"
+                )
+
+            test_images_path = str(paths["test"][self.subtest_folder])
+            gt_images_path = str(paths["gt"][self.subtest_folder])
+
+            self.test_images = file_reader(test_images_path, "png", "jpg")
+            self.gt_images = file_reader(gt_images_path, "png", "jpg")
+
+            if not self.test_images:
+                raise ValueError(f"No test images found in {test_images_path}")
+            if len(self.test_images) != len(self.gt_images):
+                raise ValueError(
+                    f"test_images count ({len(self.test_images)}) != ground_truth count ({len(self.gt_images)})"
+                )
+
+            self.cached_gt_images = self.ground_truth_caching()
+
+            tt_paths = training_testing_paths(self.dataset_type)
+            self.save_roc_plot_dir = create_save_dirs(
+                directory_path=str(tt_paths["roc_plot"]),
+                network_type=self.network_type,
+                timestamp=self.timestamp,
+            )
+            self.metrics_save_dir = create_save_dirs(
+                directory_path=str(tt_paths["metrics"]),
+                network_type=self.network_type,
+                timestamp=self.timestamp,
+            )
+            if self.test_cfg.get("vis_results"):
+                self.save_reconstruction_plot_dir = create_save_dirs(
+                    directory_path=str(tt_paths["reconstruction_vis"]),
+                    network_type=self.network_type,
+                    timestamp=self.timestamp,
+                )
+        else:
+            self.save_reconstruction_dir = create_save_dirs(
+                directory_path=str(training_testing_paths(self.dataset_type)["reconstruction"]),
+                network_type=self.network_type,
+                timestamp=self.timestamp,
+            )
+
+    @staticmethod
+    def load_train_params(weights_dir: str) -> dict:
+        """
+        Load the params.json saved next to the trained weights.
+
+        Args:
+            weights_dir: Directory of the selected weight file.
+
+        Returns:
+            dict: The training run parameters.
+        """
+        params_path = os.path.join(weights_dir, "params.json")
+        if not os.path.isfile(params_path):
+            raise ValueError(f"params.json not found in {weights_dir} - run a new training to generate it")
+
+        with open(params_path, "r", encoding="utf-8") as f:
+            params = json.load(f)
+
+        logging.info(f"Loaded training params from: {params_path}")
+        return params
+
+    def load_model(self, network_cfg: dict):
+        """
+        Build the network and load the latest trained weights.
+
+        Args:
+            network_cfg: The architecture config for NetworkFactory.
+
+        Returns:
+            torch.nn.Module: The model in eval mode on the selected device.
+        """
+        model = NetworkFactory.create_network(
+            network_type=self.network_type, network_cfg=network_cfg
+        ).to(self.device)
+
+        state_dict = torch.load(self.weights_path, map_location=self.device)
         model.load_state_dict(state_dict)
         model.eval()
 
+        logging.info(f"Loaded weights from: {self.weights_path}")
         return model
 
-    def get_residual_map(self, test_img_path: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_residual_map(self, test_img_path: str) -> tuple:
         """
         Get the residual map of a test image after reconstruction.
-        
+
         Args:
             test_img_path: Path to the test image.
-        
-        Returns:
-             Tuple containing the original image, reconstructed image, and SSIM residual map.
-        """
 
+        Returns:
+            tuple: The original image, reconstructed image and SSIM residual map.
+        """
         if self.grayscale:
             test_img = cv2.imread(test_img_path, cv2.IMREAD_GRAYSCALE)
         else:
             test_img = cv2.imread(test_img_path)
+
+        if test_img is None:
+            raise ValueError(f"Failed to read image: {test_img_path}")
+
+        if not self.grayscale:
             test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
 
-        if test_img.shape[:2] != self.test_cfg.get("img_size"):
-            test_img = cv2.resize(test_img, self.test_cfg.get("img_size"))
-        if self.test_cfg.get("img_size")[0] != self.mask_size:
-            tmp = (self.test_cfg.get("img_size")[0] - self.mask_size) // 2
-            test_img = test_img[tmp:tmp + self.mask_size, tmp:tmp + self.mask_size]
+        if test_img.shape[:2] != (self.img_size, self.img_size):
+            test_img = cv2.resize(test_img, (self.img_size, self.img_size))
 
         test_img_ = test_img / 255.
 
-        if test_img.shape[:2] == self.test_cfg.get("crop_size"):
-            test_img_ = np.expand_dims(test_img_, 0)
-            decoded_img = self.model(test_img_)
-            cv2.imshow("decoded_img", decoded_img)
-            cv2.waitKey(0)
+        patches = get_patch(test_img_, self.crop_size, self.stride)
+        if self.grayscale:
+            patches = np.expand_dims(patches, 0)
+            patches = np.transpose(patches, (1, 0, 2, 3))
         else:
-            patches = get_patch(test_img_, self.test_cfg.get("crop_size")[0], self.test_cfg.get("stride"))
-            if self.grayscale:
-                patches = np.expand_dims(patches, 0)
-                patches = np.transpose(patches, (1, 0, 2, 3))
-            else:
-                patches = np.transpose(patches, (0, 3, 1, 2))
-            patches = torch.from_numpy(patches).float()
-            patches = patches.to(self.device)
-            patches = self.model(patches)
-            decoded_img = (
-                patch2img(
-                    patches,
-                    self.test_cfg.get("img_size")[0],
-                    self.test_cfg.get("crop_size")[0],
-                    self.test_cfg.get("stride")
-                )
-            )
+            patches = np.transpose(patches, (0, 3, 1, 2))
+        patches = torch.from_numpy(patches).float().to(self.device)
 
+        with torch.no_grad():
+            patches = self.model(patches)
+
+        decoded_img = patch2img(patches, self.img_size, self.crop_size, self.stride)
         rec_img = np.reshape((decoded_img * 255.).astype('uint8'), test_img.shape)
 
         if self.grayscale:
@@ -231,12 +214,11 @@ class TestAutoEncoder:
 
     def get_mask(self) -> np.ndarray:
         """
-        Generate a depressing mask.
+        Generate a depressing mask that damps the image borders.
 
         Returns:
-             Depressing mask as a NumPy array.
+            np.ndarray: The depressing mask.
         """
-
         depr_mask = np.ones((self.mask_size, self.mask_size)) * 0.2
         depr_mask[5:self.mask_size - 5, 5:self.mask_size - 5] = 1
         return depr_mask
@@ -245,27 +227,27 @@ class TestAutoEncoder:
     def threshold_calculator(start: float, end: float, number_of_steps: int) -> np.ndarray:
         """
         Generate an array of thresholds within a specified range.
-        
+
         Args:
             start: Starting value of the threshold range.
             end: Ending value of the threshold range.
             number_of_steps: Number of steps to divide the range into.
 
         Returns:
-             NumPy array containing the generated thresholds.
+            np.ndarray: The generated thresholds.
         """
-
-        step = end / number_of_steps
+        step = (end - start) / number_of_steps
         return np.arange(start=start, stop=end, step=step)
 
-    def plot_ori_rec_images(self):
+    def plot_ori_rec_images(self) -> None:
         """
+        Save side-by-side original and reconstructed images of the train set.
 
-        :return:
+        Returns:
+            None
         """
-
-        for idx, test_img in tqdm(enumerate(self.train_images), total=len(self.train_images), desc='Reconstructing'):
-            filename = os.path.join(self.save_reconstruction_dir, f"{idx}_reconstruction.png")
+        for idx, test_img in tqdm(enumerate(self.train_images), total=len(self.train_images), desc="Reconstructing"):
+            filename = os.path.join(str(self.save_reconstruction_dir), f"{idx}_reconstruction.png")
             test_img, rec_img, _ = self.get_residual_map(test_img)
 
             plt.subplot(1, 2, 1)
@@ -281,27 +263,28 @@ class TestAutoEncoder:
             plt.close()
             gc.collect()
 
-    def plot_ori_rec_mask_images(self, test_img: np.ndarray, rec_img: np.ndarray, mask: np.ndarray, vis_img: np.ndarray,
-                                 idx: int, ssim_threshold: float) -> None:
+    def plot_ori_rec_mask_images(self, test_img: np.ndarray, rec_img: np.ndarray, mask: np.ndarray,
+                                 vis_img: np.ndarray, idx: int, ssim_threshold: float) -> None:
         """
-        Plot and save a grid of images including the test image, reconstructed image, mask, and visualized image.
+        Plot and save the test image, reconstruction, mask and visualization.
 
         Args:
-            test_img: The original test image (BGR format).
-            rec_img: The reconstructed image (BGR format).
-            mask: The mask image (grayscale).
-            vis_img: The visualized image (BGR format).
+            test_img: The original test image.
+            rec_img: The reconstructed image.
+            mask: The predicted mask.
+            vis_img: The visualization image.
             idx: Index for naming the saved file.
-            ssim_threshold:
+            ssim_threshold: The threshold used for the mask.
 
         Returns:
-             None
+            None
         """
+        filename = os.path.join(str(self.save_reconstruction_plot_dir), f"{ssim_threshold}_{idx}_reconstruction.png")
 
-        filename = os.path.join(self.save_reconstruction_plot_dir, f"{ssim_threshold}_{idx}_reconstruction.png")
-
-        test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
-        vis_img = cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB)
+        if test_img.ndim == 3:
+            test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
+        if vis_img.ndim == 3:
+            vis_img = cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB)
 
         plt.subplot(2, 2, 1)
         plt.imshow(test_img, cmap='gray')
@@ -322,22 +305,20 @@ class TestAutoEncoder:
 
         plt.savefig(filename, dpi=300)
         plt.close()
-
         gc.collect()
 
     def plot_average_roc(self, all_fpr: list, all_tpr: list) -> float:
         """
-        Plot the average ROC curve.
+        Plot the average ROC curve and return its AUC.
 
         Args:
             all_fpr: List of false positive rates.
             all_tpr: List of true positive rates.
 
         Returns:
-             auc_roc
+            float: The ROC AUC value.
         """
-
-        filename = os.path.join(self.save_roc_plot_dir, f"{self.network_type}_{self.dataset_type}roc.png")
+        filename = os.path.join(str(self.save_roc_plot_dir), f"{self.network_type}_{self.dataset_type}_roc.png")
 
         tpr_array = np.array(all_tpr)
         fpr_array = np.array(all_fpr)
@@ -360,19 +341,21 @@ class TestAutoEncoder:
         plt.savefig(filename, dpi=300)
         plt.close()
 
-        return auc_roc
+        return float(auc_roc)
 
     def ground_truth_caching(self) -> dict:
         """
+        Load, binarize and cache all ground truth masks.
 
         Returns:
-
+            dict: Ground truth image path -> flattened binary mask.
         """
-
         gt_images_cache = {}
         for gt_img in self.gt_images:
             gt = cv2.imread(gt_img, 0)
-            gt = cv2.resize(gt, self.test_cfg.get("img_size"))
+            if gt is None:
+                raise ValueError(f"Failed to read ground truth image: {gt_img}")
+            gt = cv2.resize(gt, (self.img_size, self.img_size))
             gt = cv2.threshold(gt, 128, 255, cv2.THRESH_BINARY)[1]
             gt = gt.ravel()
             gt = np.where(gt == 255, 1, 0)
@@ -380,17 +363,16 @@ class TestAutoEncoder:
 
         return gt_images_cache
 
-    def get_results(self, ssim_threshold: float):
+    def get_results(self, ssim_threshold: float) -> tuple:
         """
-        Calculate average False Positive Rate (FPR) and True Positive Rate (TPR) for a given SSIM threshold.
+        Calculate average FPR and TPR for a given SSIM threshold.
 
         Args:
             ssim_threshold: SSIM threshold for generating binary masks.
 
         Returns:
-
+            tuple: The average FPR and TPR.
         """
-
         all_fpr = []
         all_tpr = []
 
@@ -412,18 +394,16 @@ class TestAutoEncoder:
 
             gt = self.cached_gt_images.get(gt_img)
 
-            conf_mtx = confusion_matrix(gt, mask)
+            conf_mtx = confusion_matrix(gt, mask, labels=[0, 1])
 
             true_neg = conf_mtx[0][0]
             false_pos = conf_mtx[0][1]
             false_neg = conf_mtx[1][0]
             true_pos = conf_mtx[1][1]
 
-            # FPR
-            false_pos_rate = false_pos / (false_pos + true_neg)
+            false_pos_rate = 0 if false_pos + true_neg == 0 else false_pos / (false_pos + true_neg)
             all_fpr.append(false_pos_rate)
 
-            # TPR
             true_pos_rate = 0
             if true_pos != 0 or false_neg != 0:
                 true_pos_rate = true_pos / (true_pos + false_neg)
@@ -435,13 +415,13 @@ class TestAutoEncoder:
 
         return avg_of_list(all_fpr), avg_of_list(all_tpr)
 
-    def calculate_ssim_mse(self):
+    def calculate_ssim_mse(self) -> tuple:
         """
+        Calculate the average SSIM and MSE over the train images.
 
         Returns:
-
+            tuple: The average SSIM and MSE.
         """
-
         ssim_list = []
         mse_list = []
 
@@ -470,55 +450,61 @@ class TestAutoEncoder:
 
         return avg_ssim, mse_avg
 
-    def main(self) -> None:
+    def run(self) -> dict:
         """
-        Main method for executing the ROC analysis.
+        Execute the ROC/SSIM/MSE evaluation or the reconstruction visualization.
 
         Returns:
-             None
+            dict: Summary of the run with the main metrics and output paths.
         """
-
         if not self.test_cfg.get("vis_reconstruction"):
-            threshold_range = (
-                self.threshold_calculator(
-                    start=self.test_cfg.get("threshold_init"),
-                    end=self.test_cfg.get("threshold_end"),
-                    number_of_steps=self.test_cfg.get("num_of_steps")
-                )
+            threshold_range = self.threshold_calculator(
+                start=self.test_cfg.get("threshold_init"),
+                end=self.test_cfg.get("threshold_end"),
+                number_of_steps=self.test_cfg.get("num_of_steps"),
             )
+
+            if len(threshold_range) == 0:
+                raise ValueError("Empty threshold range - check threshold_init/threshold_end/num_of_steps")
 
             fpr_list, tpr_list = [], []
 
-            for ssim_tresh in tqdm(
-                    threshold_range,
-                    total=len(threshold_range),
-                    desc='Calculating FPR and TPR'
-            ):
+            for ssim_tresh in tqdm(threshold_range, total=len(threshold_range), desc='Calculating FPR and TPR'):
                 fpr, tpr = self.get_results(ssim_tresh)
-                fpr_list.append(fpr)
-                tpr_list.append(tpr)
+                fpr_list.append(float(fpr))
+                tpr_list.append(float(tpr))
 
-            filename = os.path.join(self.metrics_save_dir, f"{'fpr_tpr_ssim_mse_roc_auc_results.json'}")
+            filename = os.path.join(str(self.metrics_save_dir), "fpr_tpr_ssim_mse_roc_auc_results.json")
             avg_ssim, mse_avg = self.calculate_ssim_mse()
             auc_roc = self.plot_average_roc(fpr_list, tpr_list)
 
             results = {
                 "fpr": fpr_list,
                 "tpr": tpr_list,
-                "avg_ssim": avg_ssim,
-                "mse_avg": mse_avg,
+                "avg_ssim": float(avg_ssim),
+                "mse_avg": float(mse_avg),
                 "auc_roc": auc_roc,
             }
-
             save_list_to_json(filename=filename, results_dict=results)
 
-        else:
-            self.plot_ori_rec_images()
+            return {
+                "status": "DONE",
+                "network_type": self.network_type,
+                "dataset_type": self.dataset_type,
+                "subtest_folder": self.subtest_folder,
+                "auc_roc": auc_roc,
+                "avg_ssim": float(avg_ssim),
+                "mse_avg": float(mse_avg),
+                "metrics_path": filename,
+                "weights_used": self.weights_path,
+            }
 
-
-if __name__ == '__main__':
-    try:
-        autoencoder = TestAutoEncoder()
-        autoencoder.main()
-    except KeyboardInterrupt as kie:
-        logging.error(kie)
+        self.plot_ori_rec_images()
+        return {
+            "status": "DONE",
+            "network_type": self.network_type,
+            "dataset_type": self.dataset_type,
+            "reconstructed_images": len(self.train_images),
+            "save_dir": str(self.save_reconstruction_dir),
+            "weights_used": self.weights_path,
+        }
