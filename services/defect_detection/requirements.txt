@@ -9,3 +9,5 @@ pytorch-msssim
 matplotlib
 pandas
 Pillow
+scikit-image
+scikit-learn
