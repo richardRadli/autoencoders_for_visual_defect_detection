@@ -20,6 +20,8 @@ class TestingConfig:
     threshold_init: float
     threshold_end: float
     num_of_steps: int
+    vis_interval: int
+
 
 class TestingConfigService:
     @staticmethod
@@ -48,7 +50,8 @@ class TestingConfigService:
                 stride=data["stride"],
                 threshold_init=data["threshold_init"],
                 threshold_end=data["threshold_end"],
-                num_of_steps=data["num_of_steps"]
+                num_of_steps=data["num_of_steps"],
+                vis_interval=data["vis_interval"],
             )
 
             logging.info(f"Loaded testing config from: {target_file}")

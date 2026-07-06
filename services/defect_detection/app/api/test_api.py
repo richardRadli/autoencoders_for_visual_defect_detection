@@ -91,6 +91,7 @@ async def run_testing(
     threshold_end: float | None = Query(None, le=2, description="Threshold range end, decimal ≤ 2 — empty = json default"),
     vis_results: bool | None = Query(None, description="Save per-image result visualizations (true/false) — empty = json default"),
     vis_reconstruction: bool | None = Query(None, description="Reconstruction-only mode, no metrics (true/false) — empty = json default"),
+    vis_interval: int | None = Query(None, ge=1, le=50, description="Save a visualization every Nth threshold (modulo). 1 = every threshold, higher = fewer — empty = json default (10)"),
 ):
     """
     Resolve the evaluation setup and queue a testing task.
@@ -113,6 +114,7 @@ async def run_testing(
         threshold_end: Optional override for the threshold range end.
         vis_results: Optional override for per-image visualizations.
         vis_reconstruction: Optional override for reconstruction-only mode.
+        vis_interval: Optional override for how often a visualization is saved.
 
     Returns:
         dict: The queued task id and status.
@@ -157,6 +159,15 @@ async def run_testing(
             detail=f"threshold_init ({resolved_init}) must be smaller than threshold_end ({resolved_end})",
         )
 
+    resolved_vis_results = config.vis_results if vis_results is None else vis_results
+    resolved_vis_reconstruction = config.vis_reconstruction if vis_reconstruction is None else vis_reconstruction
+    if resolved_vis_results and resolved_vis_reconstruction:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="vis_results and vis_reconstruction cannot both be true - "
+                   "vis_reconstruction is a metrics-free mode that ignores vis_results",
+        )
+
     effective_config = {
         "network_type": network_type,
         "dataset_type": dataset_type.value,
@@ -167,8 +178,9 @@ async def run_testing(
         "num_of_steps": config.num_of_steps if num_of_steps is None else num_of_steps,
         "threshold_init": resolved_init,
         "threshold_end": resolved_end,
-        "vis_results": config.vis_results if vis_results is None else vis_results,
-        "vis_reconstruction": config.vis_reconstruction if vis_reconstruction is None else vis_reconstruction,
+        "vis_results": resolved_vis_results,
+        "vis_reconstruction": resolved_vis_reconstruction,
+        "vis_interval": config.vis_interval if vis_interval is None else vis_interval,
     }
 
     task = test_autoencoder_task.delay(effective_config)

@@ -16,7 +16,7 @@ from tqdm import tqdm
 from services.defect_detection.app.core.utility_services.config_service.architecture_config_service import ArchitectureConfigService
 from services.defect_detection.app.core.models.network_selector import NetworkFactory
 from shared.core.path_bindings import config_paths, dataset_paths, training_testing_paths
-from utils.ml_utils import device_selector , patch2img
+from utils.ml_utils import device_selector, patch2img
 from utils.system_utils import (setup_logger, get_patch, set_img_color, avg_of_list,
                                 find_latest_file_in_latest_directory, create_save_dirs, create_timestamp,
                                 file_reader, save_list_to_json)
@@ -43,6 +43,7 @@ class TestAutoEncoder:
         self.crop_size = self.test_cfg.get("crop_size")
         self.stride = self.test_cfg.get("stride")
         self.mask_size = self.img_size
+        self.depr_mask = self.get_mask()
 
         if self.network_type not in ["AE", "AEE", "DAE", "DAEE"]:
             raise ValueError(f"wrong network type: {self.network_type}")
@@ -362,12 +363,32 @@ class TestAutoEncoder:
 
         return gt_images_cache
 
-    def get_results(self, ssim_threshold: float) -> tuple:
+    def build_residual_cache(self) -> list:
         """
-        Calculate average FPR and TPR for a given SSIM threshold.
+        Compute and cache the reconstruction and residual map of every test
+        image once, so the threshold sweep does not re-run the model.
+
+        Returns:
+            list: One (test_img, rec_img, ssim_residual_map, gt) tuple per image.
+        """
+        cache = []
+        for test_img_path, gt_img_path in tqdm(
+            zip(self.test_images, self.gt_images),
+            total=len(self.test_images),
+            desc="Computing residual maps",
+        ):
+            test_img, rec_img, ssim_residual_map = self.get_residual_map(test_img_path)
+            gt = self.cached_gt_images.get(gt_img_path)
+            cache.append((test_img, rec_img, ssim_residual_map, gt))
+        return cache
+
+    def get_results(self, ssim_threshold: float, save_vis: bool) -> tuple:
+        """
+        Calculate average FPR and TPR at a threshold from the cached residuals.
 
         Args:
             ssim_threshold: SSIM threshold for generating binary masks.
+            save_vis: Whether to save per-image visualizations at this threshold.
 
         Returns:
             tuple: The average FPR and TPR.
@@ -375,13 +396,11 @@ class TestAutoEncoder:
         all_fpr = []
         all_tpr = []
 
-        for idx, (test_img, gt_img) in enumerate(zip(self.test_images, self.gt_images)):
-            test_img, rec_img, ssim_residual_map = self.get_residual_map(test_img)
-            depr_mask = self.get_mask()
-            ssim_residual_map *= depr_mask
+        for idx, (test_img, rec_img, ssim_residual_map, gt) in enumerate(self.residual_cache):
+            residual = ssim_residual_map * self.depr_mask
 
             mask = np.zeros((self.mask_size, self.mask_size))
-            mask[ssim_residual_map > ssim_threshold] = 1
+            mask[residual > ssim_threshold] = 1
 
             kernel = morphology.disk(4)
             mask = morphology.opening(mask, kernel)
@@ -390,8 +409,6 @@ class TestAutoEncoder:
             mask = cv2.threshold(mask, 128, 255, cv2.THRESH_BINARY)[1]
             mask = np.uint8(mask.ravel())
             mask = np.where(mask == 255, 1, 0)
-
-            gt = self.cached_gt_images.get(gt_img)
 
             conf_mtx = confusion_matrix(gt, mask, labels=[0, 1])
 
@@ -408,7 +425,7 @@ class TestAutoEncoder:
                 true_pos_rate = true_pos / (true_pos + false_neg)
             all_tpr.append(true_pos_rate)
 
-            if self.test_cfg.get("vis_results"):
+            if save_vis:
                 vis_img = set_img_color(test_img.copy(), mask_copy, weight_foreground=0.3, grayscale=self.grayscale)
                 self.plot_ori_rec_mask_images(test_img, rec_img, mask_copy, vis_img, idx, ssim_threshold)
 
@@ -466,10 +483,17 @@ class TestAutoEncoder:
             if len(threshold_range) == 0:
                 raise ValueError("Empty threshold range - check threshold_init/threshold_end/num_of_steps")
 
+            self.residual_cache = self.build_residual_cache()
+
+            vis_interval = self.test_cfg.get("vis_interval")
+            do_vis = bool(self.test_cfg.get("vis_results"))
             fpr_list, tpr_list = [], []
 
-            for ssim_tresh in tqdm(threshold_range, total=len(threshold_range), desc='Calculating FPR and TPR'):
-                fpr, tpr = self.get_results(ssim_tresh)
+            for t_idx, ssim_tresh in enumerate(
+                tqdm(threshold_range, total=len(threshold_range), desc='Calculating FPR and TPR')
+            ):
+                save_vis = do_vis and (t_idx % vis_interval == 0)
+                fpr, tpr = self.get_results(ssim_tresh, save_vis)
                 fpr_list.append(float(fpr))
                 tpr_list.append(float(tpr))
 

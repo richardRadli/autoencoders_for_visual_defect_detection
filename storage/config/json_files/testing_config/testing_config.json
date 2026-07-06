@@ -10,5 +10,6 @@
   "stride": 32,
   "threshold_init": 0.01,
   "threshold_end": 1.01,
-  "num_of_steps": 50
+  "num_of_steps": 50,
+  "vis_interval": 10
 }
