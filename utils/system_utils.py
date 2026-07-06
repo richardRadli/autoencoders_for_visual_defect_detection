@@ -88,35 +88,6 @@ def get_patch(image: np.ndarray, new_size: int, stride: int) -> np.ndarray:
     return np.array(patch)
 
 
-def patch2img(patches, im_size: int, patch_size: int, stride: int) -> np.ndarray:
-    """
-    Reconstruct an image from patches with a specified size and stride.
-
-        patches: Patches to reconstruct, assumed to be a NumPy array or PyTorch tensor.
-        im_size: Size of the reconstructed image.
-        patch_size: Size of the square patches used during extraction.
-        stride: The stride between consecutive patches during extraction.
-    Returns: Reconstructed image.
-    """
-
-    patches = patches.detach().cpu().numpy()
-    patches = np.transpose(patches, (0, 2, 3, 1))
-    img = np.zeros((im_size, im_size, patches.shape[3] + 1))
-    i, j = patch_size, patch_size
-    k = 0
-    while i <= im_size:
-        while j <= im_size:
-            img[i - patch_size:i, j - patch_size:j, :-1] += patches[k]
-            img[i - patch_size:i, j - patch_size:j, -1] += np.ones((patch_size, patch_size))
-            k += 1
-            j += stride
-        j = patch_size
-        i += stride
-    mask = np.repeat(img[:, :, -1][..., np.newaxis], patches.shape[3], 2)
-    img = img[:, :, :-1] / mask
-    return img
-
-
 def set_img_color(img: np.ndarray, predict_mask: np.ndarray, weight_foreground: float, grayscale: bool) -> np.ndarray:
     """
     Modify image colors based on a predicted mask.

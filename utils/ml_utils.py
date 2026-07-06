@@ -131,3 +131,40 @@ def set_seed(seed):
 
     # Set a fixed value for the hash seed
     os.environ['PYTHONHASHSEED'] = str(seed)
+
+def patch2img(patches, im_size: int, patch_size: int, stride: int) -> np.ndarray:
+    """
+    Reconstruct a full image from overlapping patches with seamless blending.
+
+    Each patch is weighted by a smooth 2D window so overlapping regions blend
+    gradually instead of showing hard seams. The weighted patches are summed
+    with fold and divided by the summed weights.
+
+    Args:
+        patches: Model output patches, tensor of shape (num_patches, C, patch_size, patch_size).
+        im_size: Size of the reconstructed square image.
+        patch_size: Size of each square patch.
+        stride: Stride between consecutive patches.
+
+    Returns:
+        np.ndarray: The reconstructed image of shape (im_size, im_size, C).
+    """
+    import torch
+    from torch.nn.functional import fold
+
+    patches = patches.detach().cpu()
+    num_patches, channels, _, _ = patches.shape
+
+    window_1d = torch.hann_window(patch_size, periodic=False)
+    window_2d = 0.1 + 0.9 * torch.outer(window_1d, window_1d)
+
+    weighted = (patches * window_2d).permute(1, 2, 3, 0).reshape(
+        1, channels * patch_size * patch_size, num_patches
+    )
+    numerator = fold(weighted, output_size=(im_size, im_size), kernel_size=patch_size, stride=stride)
+
+    weight_stack = window_2d.reshape(1, patch_size * patch_size, 1).expand(-1, -1, num_patches)
+    denominator = fold(weight_stack, output_size=(im_size, im_size), kernel_size=patch_size, stride=stride)
+
+    output = numerator / denominator.clamp(min=1e-8)
+    return output.squeeze(0).permute(1, 2, 0).numpy()
