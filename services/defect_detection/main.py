@@ -3,6 +3,7 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
+from services.defect_detection.app.api.test_api import test_router
 from shared.core.data_paths import init_all_paths
 from utils.system_utils import setup_logger
 from services.defect_detection.app.api.device_status_api import device_status_router
@@ -34,6 +35,7 @@ app = FastAPI(title="Defect Detection Service", lifespan=lifespan)
 
 app.include_router(device_status_router)
 app.include_router(train_router)
+app.include_router(test_router)
 
 @app.get("/")
 async def health_check():
