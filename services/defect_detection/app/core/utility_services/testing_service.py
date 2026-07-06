@@ -16,8 +16,8 @@ from tqdm import tqdm
 from services.defect_detection.app.core.utility_services.config_service.architecture_config_service import ArchitectureConfigService
 from services.defect_detection.app.core.models.network_selector import NetworkFactory
 from shared.core.path_bindings import config_paths, dataset_paths, training_testing_paths
-from utils.ml_utils import device_selector
-from utils.system_utils import (setup_logger, get_patch, patch2img, set_img_color, avg_of_list,
+from utils.ml_utils import device_selector , patch2img
+from utils.system_utils import (setup_logger, get_patch, set_img_color, avg_of_list,
                                 find_latest_file_in_latest_directory, create_save_dirs, create_timestamp,
                                 file_reader, save_list_to_json)
 
@@ -52,7 +52,6 @@ class TestAutoEncoder:
         weights_root = os.path.join(
             str(training_testing_paths(self.dataset_type)["model_weights"]), self.network_type
         )
-
         if not os.path.isdir(weights_root):
             raise ValueError(f"No trained weights found for {self.network_type} / {self.dataset_type}")
         try:
@@ -73,24 +72,24 @@ class TestAutoEncoder:
         self.model = self.load_model(network_cfg)
 
         paths = dataset_paths(self.dataset_type)
-        self.train_images = file_reader(file_path=str(paths["good"]), extension="png", extension2="jpg")
-        if not self.train_images:
-            raise ValueError(f"No training images found in {paths['good']}")
+
+        if self.subtest_folder not in paths["test"]:
+            raise ValueError(
+                f"Invalid subtest_folder '{self.subtest_folder}' for dataset '{self.dataset_type}'"
+            )
+
+        test_images_path = str(paths["test"][self.subtest_folder])
+        self.test_images = file_reader(test_images_path, "png", "jpg")
+        if not self.test_images:
+            raise ValueError(f"No test images found in {test_images_path}")
 
         if not self.test_cfg.get("vis_reconstruction"):
-            if self.subtest_folder not in paths["test"]:
-                raise ValueError(
-                    f"Invalid subtest_folder '{self.subtest_folder}' for dataset '{self.dataset_type}'"
-                )
+            self.train_images = file_reader(file_path=str(paths["good"]), extension="png", extension2="jpg")
+            if not self.train_images:
+                raise ValueError(f"No training images found in {paths['good']}")
 
-            test_images_path = str(paths["test"][self.subtest_folder])
             gt_images_path = str(paths["gt"][self.subtest_folder])
-
-            self.test_images = file_reader(test_images_path, "png", "jpg")
             self.gt_images = file_reader(gt_images_path, "png", "jpg")
-
-            if not self.test_images:
-                raise ValueError(f"No test images found in {test_images_path}")
             if len(self.test_images) != len(self.gt_images):
                 raise ValueError(
                     f"test_images count ({len(self.test_images)}) != ground_truth count ({len(self.gt_images)})"
@@ -241,14 +240,14 @@ class TestAutoEncoder:
 
     def plot_ori_rec_images(self) -> None:
         """
-        Save side-by-side original and reconstructed images of the train set.
+        Save side-by-side original and reconstructed images of the test set.
 
         Returns:
             None
         """
-        for idx, test_img in tqdm(enumerate(self.train_images), total=len(self.train_images), desc="Reconstructing"):
+        for idx, test_img_path in tqdm(enumerate(self.test_images), total=len(self.test_images), desc="Reconstructing"):
             filename = os.path.join(str(self.save_reconstruction_dir), f"{idx}_reconstruction.png")
-            test_img, rec_img, _ = self.get_residual_map(test_img)
+            test_img, rec_img, _ = self.get_residual_map(test_img_path)
 
             plt.subplot(1, 2, 1)
             plt.imshow(test_img, cmap='gray')
@@ -504,7 +503,7 @@ class TestAutoEncoder:
             "status": "DONE",
             "network_type": self.network_type,
             "dataset_type": self.dataset_type,
-            "reconstructed_images": len(self.train_images),
+            "reconstructed_images": len(self.test_images),
             "save_dir": str(self.save_reconstruction_dir),
             "weights_used": self.weights_path,
         }
