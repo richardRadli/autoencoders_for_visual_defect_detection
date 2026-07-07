@@ -279,7 +279,9 @@ class TestAutoEncoder:
         Returns:
             None
         """
-        filename = os.path.join(str(self.save_reconstruction_plot_dir), f"{ssim_threshold}_{idx}_reconstruction.png")
+
+        threshold_str = f"{ssim_threshold:.3f}".replace(".", "")
+        filename = os.path.join(str(self.save_reconstruction_plot_dir), f"{idx}_{threshold_str}_reconstruction.png")
 
         if test_img.ndim == 3:
             test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
