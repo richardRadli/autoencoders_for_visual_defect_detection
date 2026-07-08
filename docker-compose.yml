@@ -71,3 +71,25 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    container_name: pill-rec-frontend
+
+    ports:
+      - "5173:5173"
+
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8001
+
+    restart: unless-stopped
+
+    depends_on:
+      - data_operations
+      - defect_detection
