@@ -76,7 +76,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
 
-    container_name: pill-rec-frontend
+    container_name: defect_detection_frontend
 
     ports:
       - "5173:5173"
