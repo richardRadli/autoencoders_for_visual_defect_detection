@@ -1,5 +1,14 @@
+import { Header } from "./components/Header"
+
 function App() {
-  return <h1>Defect detection framework</h1>
+  return (
+    <div>
+      <Header />
+      <main style={{ padding: 24 }}>
+        <p style={{ color: "var(--text-secondary)" }}>Theme test — click the icon top-right.</p>
+      </main>
+    </div>
+  )
 }
 
 export default App
