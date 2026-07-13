@@ -8,7 +8,6 @@ from services.data_operations.app.api.draw_rectangles_api import draw_rectangles
 from utils.system_utils import setup_logger
 from services.data_operations.app.api.augmentation_api import augmentation_router
 from services.data_operations.app.api.dataset_api import ops_dataset_router
-from services.defect_detection.app.api.dataset_api import defect_dataset_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,7 +32,6 @@ app = FastAPI(title="Data Operations Service", lifespan=lifespan)
 app.include_router(draw_rectangles_router)
 app.include_router(augmentation_router)
 app.include_router(ops_dataset_router)
-app.include_router(defect_dataset_router)
 
 @app.get("/")
 async def health_check():
