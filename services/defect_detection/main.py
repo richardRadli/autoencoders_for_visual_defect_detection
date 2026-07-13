@@ -3,7 +3,7 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
-from services.defect_detection.app.api.dataset_api import defect_dataset_router
+from services.defect_detection.app.api.defect_dataset_api import defect_dataset_router
 from services.defect_detection.app.api.test_api import test_router
 from shared.core.data_paths import init_all_paths
 from utils.system_utils import setup_logger

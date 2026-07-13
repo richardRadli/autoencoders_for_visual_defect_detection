@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 
-from services.defect_detection.app.core.utility_services.dataset_service import DatasetService
+from services.defect_detection.app.core.utility_services.defect_dataset_service import DatasetService
 from shared.core.enums import DatasetType
 
 

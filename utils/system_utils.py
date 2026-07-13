@@ -376,26 +376,37 @@ def find_latest_valid_run(base_dir: str | Path) -> Path | None:
 
 def sample_evenly(items: list, count: int = 5) -> list:
     """
-    Pick evenly spaced items from a list, always including the first and last.
+    Pick at most count evenly spaced items while preserving their order.
 
-    Useful for previews where the progression (first -> last) should be
-    visible. Deterministic: the same input always yields the same picks.
+    When at least two items are requested, the first and last items are always
+    included. The input list is never modified.
 
     Args:
-        items: The list to sample from (already in the desired order).
-        count: How many items to pick.
+        items: Items in the order in which they should be sampled.
+        count: Maximum number of items to return.
 
     Returns:
-        list: The sampled items. If the list has 'count' or fewer items, the
-        whole list is returned unchanged.
+        list: A new list containing the sampled items. Returns an empty list
+        for empty input or non-positive count. If count is one, returns the
+        first item. If count is greater than or equal to the number of items,
+        returns a copy of the complete input list.
     """
     n = len(items)
-    if count <= 0:
+
+    if count <= 0 or n == 0:
         return []
-    if n <= count:
+
+    if count >= n:
         return list(items)
-    indices = [round(i * (n - 1) / (count - 1)) for i in range(count)]
-    return [items[i] for i in indices]
+
+    if count == 1:
+        return [items[0]]
+
+    indices = [
+        round(index * (n - 1) / (count - 1))
+        for index in range(count)
+    ]
+    return [items[index] for index in indices]
 
 
 def safe_image_path(root: str | Path, relative_path: str) -> Path:

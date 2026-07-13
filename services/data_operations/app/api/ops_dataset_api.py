@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 
-from services.data_operations.app.core.dataset_service import DatasetService
+from services.data_operations.app.core.ops_dataset_service import DatasetService
 from shared.core.enums import DatasetType
 
 

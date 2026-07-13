@@ -7,7 +7,7 @@ from shared.core.data_paths import init_all_paths
 from services.data_operations.app.api.draw_rectangles_api import draw_rectangles_router
 from utils.system_utils import setup_logger
 from services.data_operations.app.api.augmentation_api import augmentation_router
-from services.data_operations.app.api.dataset_api import ops_dataset_router
+from services.data_operations.app.api.ops_dataset_api import ops_dataset_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
