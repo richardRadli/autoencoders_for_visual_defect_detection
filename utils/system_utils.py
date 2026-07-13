@@ -307,4 +307,124 @@ def save_list_to_json(filename: str, results_dict: dict) -> None:
         json.dump(results_dict, json_file, indent=4)
 
 
+def read_json_safely(path: str | Path) -> dict | None:
+    """
+    Read and parse a JSON file, returning None instead of raising on a
+    missing or corrupt file.
 
+    Args:
+        path: Path to the JSON file.
+
+    Returns:
+        dict | None: The parsed JSON, or None if the file is missing or invalid.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+def list_subdirectories(path: str | Path) -> List[Path]:
+    """
+    List the immediate subdirectories of a directory, sorted by name.
+
+    Timestamped run folders (e.g. '2026-07-13_10-20-30') sort chronologically
+    by name, so name order equals time order without relying on mtime.
+
+    Args:
+        path: Directory to look in.
+
+    Returns:
+        List[Path]: Subdirectories as full paths, name-sorted ascending;
+        empty if the directory does not exist.
+    """
+    base = Path(path)
+    if not base.is_dir():
+        return []
+    return sorted((p for p in base.iterdir() if p.is_dir()), key=lambda p: p.name)
+
+
+def find_latest_valid_run(base_dir: str | Path) -> Path | None:
+    """
+    Find the most recent run folder that finished without being stopped.
+
+    Each run folder is a timestamped subdirectory with a params.json holding a
+    'result.stopped' flag. A run is valid only if its params.json exists,
+    parses, and reports stopped == False. Stopped or crashed runs (missing or
+    corrupt params.json) are skipped.
+
+    Args:
+        base_dir: Directory holding the timestamped run folders
+            (e.g. the dataset's 'aug' or 'noise' folder).
+
+    Returns:
+        Path | None: The latest valid run folder, or None if there is none.
+    """
+    for run_dir in reversed(list_subdirectories(base_dir)):
+        params = read_json_safely(run_dir / "params.json")
+        if params is None:
+            continue
+        result = params.get("result")
+        if not isinstance(result, dict):
+            continue
+        if result.get("stopped") is not False:
+            continue
+        return run_dir
+    return None
+
+
+def sample_evenly(items: list, count: int = 5) -> list:
+    """
+    Pick evenly spaced items from a list, always including the first and last.
+
+    Useful for previews where the progression (first -> last) should be
+    visible. Deterministic: the same input always yields the same picks.
+
+    Args:
+        items: The list to sample from (already in the desired order).
+        count: How many items to pick.
+
+    Returns:
+        list: The sampled items. If the list has 'count' or fewer items, the
+        whole list is returned unchanged.
+    """
+    n = len(items)
+    if count <= 0:
+        return []
+    if n <= count:
+        return list(items)
+    indices = [round(i * (n - 1) / (count - 1)) for i in range(count)]
+    return [items[i] for i in indices]
+
+
+def safe_image_path(root: str | Path, relative_path: str) -> Path:
+    """
+    Resolve an image path under a root directory, guarding against escaping it.
+
+    Protects the preview image endpoint from path traversal: the resolved file
+    must stay inside 'root', be an allowed image type, and exist.
+
+    Args:
+        root: The directory the image must live under.
+        relative_path: The run-relative path returned by the preview list.
+
+    Returns:
+        Path: The validated absolute path to the image file.
+
+    Raises:
+        ValueError: If the path escapes root, is not png/jpg/jpeg, or is missing.
+    """
+    root_resolved = Path(root).resolve()
+    target = (root_resolved / relative_path).resolve()
+
+    if not target.is_relative_to(root_resolved):
+        raise ValueError(f"Path escapes the allowed directory: {relative_path}")
+
+    if target.suffix.lower() not in (".png", ".jpg", ".jpeg"):
+        raise ValueError(f"Not an allowed image type: {relative_path}")
+
+    if not target.is_file():
+        raise ValueError(f"Image not found: {relative_path}")
+
+    return target
