@@ -7,7 +7,7 @@ from services.data_operations.app.core.dataset_service import DatasetService
 from shared.core.enums import DatasetType
 
 
-dataset_router = APIRouter(
+ops_dataset_router = APIRouter(
     prefix="/dataset",
     tags=["Dataset"],
 )
@@ -21,7 +21,7 @@ class PreviewType(str, Enum):
     noise = "noise"
 
 
-@dataset_router.get("/readiness")
+@ops_dataset_router.get("/readiness")
 async def get_readiness(
     dataset_type: DatasetType = Query(..., description="Dataset to report on"),
 ):
@@ -37,7 +37,7 @@ async def get_readiness(
     return await run_in_threadpool(DatasetService.get_readiness, dataset_type.value)
 
 
-@dataset_router.get("/preview")
+@ops_dataset_router.get("/preview")
 async def get_preview(
     dataset_type: DatasetType = Query(..., description="Dataset to preview"),
     preview_type: PreviewType = Query(..., description="Which image set: good / aug / noise"),
@@ -64,7 +64,7 @@ async def get_preview(
     }
 
 
-@dataset_router.get("/preview/image")
+@ops_dataset_router.get("/preview/image")
 async def get_preview_image(
     dataset_type: DatasetType = Query(..., description="Dataset the image belongs to"),
     preview_type: PreviewType = Query(..., description="Which image set: good / aug / noise"),
