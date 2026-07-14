@@ -22,6 +22,7 @@ MAX_TOTAL = 20000
 class ImageSize(int, Enum):
     """Allowed source image sizes."""
 
+    px_1024 = 1024
     px_512 = 512
     px_256 = 256
 
@@ -29,6 +30,7 @@ class ImageSize(int, Enum):
 class CropSize(int, Enum):
     """Allowed crop sizes."""
 
+    px_512 = 512
     px_256 = 256
     px_128 = 128
     px_64 = 64
@@ -37,7 +39,7 @@ class CropSize(int, Enum):
 @augmentation_router.post("/run")
 async def run_augmentation(
     dataset_type: DatasetType = Query(..., description="Dataset to process"),
-    img_size: ImageSize = Query(ImageSize.px_256, description="Source image size"),
+    img_size: ImageSize = Query(ImageSize.px_256, description="Source image size (256, 512 or 1024)"),
     crop_size: CropSize = Query(CropSize.px_128, description="Crop size; must be smaller than img_size and divide it evenly"),
     rotate_count: int | None = Query(None, ge=0, description="Rotated images — empty = config default, 0 = none"),
     horizontal_flip_count: int | None = Query(None, ge=0, description="Horizontally flipped images — empty = config default, 0 = none"),
@@ -48,13 +50,16 @@ async def run_augmentation(
 
     The augmented total (rotate + horizontal flip + vertical flip) must be
     between 5000 and 20000, or exactly 0 (base crops only). An invalid size
-    combination does not fail the request: it falls back to the default crop
-    size and reports a warning.
+    combination does not fail the request: the crop size falls back to half the
+    image size (which is always valid) and a warning is reported.
+
+    The effective sizes are written into the augmentation run's params.json.
+    Training reads and records them, then testing reads them from the training params.
 
     Args:
         dataset_type: Dataset to process.
-        img_size: Source image size (512 or 256).
-        crop_size: Crop size (256, 128 or 64).
+        img_size: Source image size (256, 512 or 1024).
+        crop_size: Crop size (64, 128, 256 or 512).
         rotate_count: Optional override for the number of rotated images.
         horizontal_flip_count: Optional override for the horizontally flipped images.
         vertical_flip_count: Optional override for the vertically flipped images.
@@ -69,12 +74,13 @@ async def run_augmentation(
     crop = int(crop_size)
     warning = None
     if crop >= img or img % crop != 0:
+        effective_crop = img // 2
         warning = (
-            f"Invalid size combination: crop_size={crop}, img_size={img}. "
+            f"Invalid size combination: img_size={img}, crop_size={crop} (requested). "
             f"crop_size must be smaller than img_size and divide it evenly. "
-            f"Used default crop_size={config.crop_size} instead."
+            f"Using crop_size={effective_crop} (img_size // 2) instead."
         )
-        crop = config.crop_size
+        crop = effective_crop
         logging.warning(warning)
 
     rotate = config.rotate_count if rotate_count is None else rotate_count

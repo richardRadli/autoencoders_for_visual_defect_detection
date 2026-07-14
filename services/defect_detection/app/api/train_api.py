@@ -65,9 +65,6 @@ async def run_training(
     (AE / AEE / DAE / DAEE). Every other parameter overrides the matching field
     in training_config.json; left empty, each falls back to the JSON default.
 
-    NOTE: for now this only resolves and echoes the effective config — the
-    actual training is wired in later (background task).
-
     Args:
         dataset_type: Dataset to train on.
         ae_type: Standard (plain) or denoising autoencoder.
