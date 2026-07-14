@@ -29,20 +29,6 @@ class ModelSize(str, Enum):
     extended = "extended"
 
 
-class ImageSize(int, Enum):
-    """Allowed test image sizes."""
-
-    px_256 = 256
-    px_512 = 512
-
-
-class CropSize(int, Enum):
-    """Allowed patch (crop) sizes."""
-
-    px_64 = 64
-    px_128 = 128
-
-
 class Stride(int, Enum):
     """Allowed sliding-window strides."""
 
@@ -83,8 +69,6 @@ async def run_testing(
     ae_type: AEType = Query(AEType.plain, description="plain = standard AE, denoising = noisy→clean (DAE)"),
     model_size: ModelSize = Query(ModelSize.base, description="base = standard, extended = deeper network"),
     subtest_folder: SubtestFolder = Query(SubtestFolder.defective, description="texture → defective; cpu → added/contamination/missing"),
-    img_size: ImageSize = Query(ImageSize.px_256, description="Image size in pixels (256 or 512)"),
-    crop_size: CropSize = Query(CropSize.px_128, description="Patch size in pixels (64 or 128)"),
     stride: Stride = Query(Stride.s_32, description="Sliding-window stride (4/8/16/32/64)"),
     num_of_steps: int | None = Query(None, ge=1, description="Number of threshold steps, whole number — empty = json default"),
     threshold_init: float | None = Query(None, ge=0, description="Threshold range start, decimal ≥ 0 — empty = json default"),
@@ -98,16 +82,15 @@ async def run_testing(
 
     The two dropdowns choose the network: ae_type (plain/denoising) and
     model_size (base/extended) combine into the network type
-    (AE / AEE / DAE / DAEE). grayscale is NOT set here — the test reads it from
-    the trained run's params.json so it always matches the weights.
+    (AE / AEE / DAE / DAEE). grayscale, img_size and crop_size are not set here
+    — the test reads them from the trained run's params.json so they always
+    match the weights.
 
     Args:
         dataset_type: Dataset to evaluate on.
         ae_type: Standard (plain) or denoising autoencoder.
         model_size: Base or extended architecture.
         subtest_folder: Which test subset to use (validated against the dataset).
-        img_size: Image size (dropdown).
-        crop_size: Patch size (dropdown).
         stride: Sliding-window stride (dropdown).
         num_of_steps: Optional override for the number of threshold steps.
         threshold_init: Optional override for the threshold range start.
@@ -126,25 +109,7 @@ async def run_testing(
                    f"Allowed: {sorted(VALID_SUBTESTS[dataset_type.value])}",
         )
 
-    img = int(img_size)
-    crop = int(crop_size)
     strd = int(stride)
-
-    if crop >= img:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"crop_size ({crop}) must be smaller than img_size ({img})",
-        )
-    if img - crop < strd:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"img_size - crop_size ({img - crop}) must be >= stride ({strd})",
-        )
-    if (img - crop) % strd != 0:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"(img_size - crop_size) ({img - crop}) must be divisible by stride ({strd})",
-        )
 
     testing_cfg_path = config_paths().get("testing_config")
     config = TestingConfigService.load(testing_cfg_path)
@@ -172,8 +137,6 @@ async def run_testing(
         "network_type": network_type,
         "dataset_type": dataset_type.value,
         "subtest_folder": subtest_folder.value,
-        "img_size": img,
-        "crop_size": crop,
         "stride": strd,
         "num_of_steps": config.num_of_steps if num_of_steps is None else num_of_steps,
         "threshold_init": resolved_init,

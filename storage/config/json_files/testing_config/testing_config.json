@@ -5,8 +5,6 @@
   "vis_results": false,
   "vis_reconstruction": false,
   "grayscale": true,
-  "img_size": 256,
-  "crop_size": 128,
   "stride": 32,
   "threshold_init": 0.01,
   "threshold_end": 1.01,

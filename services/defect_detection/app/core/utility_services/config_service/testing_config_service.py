@@ -14,8 +14,6 @@ class TestingConfig:
     vis_results: bool
     vis_reconstruction: bool
     grayscale: bool
-    img_size: int
-    crop_size: int
     stride: int
     threshold_init: float
     threshold_end: float
@@ -45,8 +43,6 @@ class TestingConfigService:
                 vis_results=data["vis_results"],
                 vis_reconstruction=data["vis_reconstruction"],
                 grayscale=data["grayscale"],
-                img_size=data["img_size"],
-                crop_size=data["crop_size"],
                 stride=data["stride"],
                 threshold_init=data["threshold_init"],
                 threshold_end=data["threshold_end"],

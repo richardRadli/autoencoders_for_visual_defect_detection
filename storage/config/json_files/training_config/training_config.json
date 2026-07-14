@@ -8,7 +8,6 @@
   "decrease_learning_rate": false,
   "step_size": 15,
   "gamma": 0.5,
-  "img_size": 256,
   "grayscale": true,
   "latent_space_dimension": 100,
   "vis_during_training": true,

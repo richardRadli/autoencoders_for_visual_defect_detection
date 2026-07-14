@@ -27,6 +27,10 @@ class TestAutoEncoder:
         """
         Set up the model, data and output dirs for one evaluation run.
 
+        img_size and crop_size are not chosen here: they are inherited from the
+        training run of the selected weights (which took them from the
+        augmentation run), so the architecture always matches the weights.
+
         Args:
             config: Effective testing config (already resolved by the API).
         """
@@ -39,11 +43,7 @@ class TestAutoEncoder:
         self.dataset_type = self.test_cfg.get("dataset_type")
         self.subtest_folder = self.test_cfg.get("subtest_folder")
 
-        self.img_size = self.test_cfg.get("img_size")
-        self.crop_size = self.test_cfg.get("crop_size")
         self.stride = self.test_cfg.get("stride")
-        self.mask_size = self.img_size
-        self.depr_mask = self.get_mask()
 
         if self.network_type not in ["AE", "AEE", "DAE", "DAEE"]:
             raise ValueError(f"wrong network type: {self.network_type}")
@@ -63,11 +63,18 @@ class TestAutoEncoder:
         train_params = self.load_train_params(os.path.dirname(self.weights_path))
         self.grayscale = train_params["grayscale"]
 
+        # Sizes are inherited from the training run of these weights.
+        self.img_size, self.crop_size = self._read_train_sizes(train_params)
+
+        self.mask_size = self.img_size
+        self.depr_mask = self.get_mask()
+
         network_cfg = ArchitectureConfigService.build(
             base_path=config_paths().get("network_config"),
             network_type=self.network_type,
             grayscale=self.grayscale,
             latent_space_dimension=train_params["latent_space_dimension"],
+            crop_size=self.crop_size,
         )
 
         self.model = self.load_model(network_cfg)
@@ -142,6 +149,35 @@ class TestAutoEncoder:
 
         logging.info(f"Loaded training params from: {params_path}")
         return params
+
+    @staticmethod
+    def _read_train_sizes(train_params: dict) -> tuple[int, int]:
+        """
+        Read the (img_size, crop_size) the weights were trained with.
+
+        Both sizes are inherited from training, which took them from the
+        augmentation run; they are never chosen at test time.
+
+        Args:
+            train_params: The training params.json loaded next to the weights.
+
+        Returns:
+            tuple[int, int]: (img_size, crop_size).
+
+        Raises:
+            ValueError: If either size is missing or is not a positive integer.
+        """
+        img_size = train_params.get("img_size")
+        crop_size = train_params.get("crop_size")
+
+        for name, value in (("img_size", img_size), ("crop_size", crop_size)):
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(
+                    f"Trained weights have no usable {name} in params.json (got {value!r}) - "
+                    f"retrain so the sizes are recorded"
+                )
+
+        return img_size, crop_size
 
     def load_model(self, network_cfg: dict):
         """

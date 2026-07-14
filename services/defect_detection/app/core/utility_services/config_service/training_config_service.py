@@ -17,7 +17,6 @@ class TrainingConfig:
     decrease_learning_rate: bool
     step_size: int
     gamma: float
-    img_size: int
     grayscale: bool
     latent_space_dimension: int
     vis_during_training: bool
@@ -52,7 +51,6 @@ class TrainingConfigService:
                 decrease_learning_rate=data["decrease_learning_rate"],
                 step_size=data["step_size"],
                 gamma=data["gamma"],
-                img_size=data["img_size"],
                 grayscale=data["grayscale"],
                 latent_space_dimension=data["latent_space_dimension"],
                 vis_during_training=data["vis_during_training"],

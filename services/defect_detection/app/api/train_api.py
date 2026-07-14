@@ -30,13 +30,6 @@ class ModelSize(str, Enum):
     extended = "extended"
 
 
-class ImageSize(int, Enum):
-    """Allowed training image sizes."""
-
-    px_512 = 512
-    px_256 = 256
-
-
 NETWORK_TYPE_MAP = {
     ("plain", "base"): "AE",
     ("plain", "extended"): "AEE",
@@ -57,7 +50,6 @@ async def run_training(
     decrease_learning_rate: bool | None = Query(None, description="Decay the learning rate during training (true/false) — empty = json default"),
     step_size: int | None = Query(None, ge=1, description="LR scheduler step size in epochs, whole number, e.g. 15 — empty = json default"),
     gamma: float | None = Query(None, gt=0, description="LR decay factor, decimal, e.g. 0.5 — empty = json default"),
-    img_size: ImageSize = Query(ImageSize.px_256, description="Image size in pixels (256 default, or 512)"),
     grayscale: bool | None = Query(None, description="Grayscale (true) or color/RGB (false) — empty = json default"),
     latent_space_dimension: int | None = Query(None, ge=1, description="Latent space size, whole number, e.g. 100 — empty = json default"),
     vis_during_training: bool | None = Query(None, description="Save visualizations during training (true/false) — empty = json default"),
@@ -87,7 +79,6 @@ async def run_training(
         decrease_learning_rate: Optional override for LR decay on/off.
         step_size: Optional override for the LR scheduler step size.
         gamma: Optional override for the LR decay factor.
-        img_size: Image size (dropdown, defaults to 256).
         grayscale: Optional override for grayscale vs RGB.
         latent_space_dimension: Optional override for the latent space size.
         vis_during_training: Optional override for training visualizations.
@@ -113,7 +104,6 @@ async def run_training(
         "decrease_learning_rate": config.decrease_learning_rate if decrease_learning_rate is None else decrease_learning_rate,
         "step_size": config.step_size if step_size is None else step_size,
         "gamma": config.gamma if gamma is None else gamma,
-        "img_size": int(img_size),
         "grayscale": config.grayscale if grayscale is None else grayscale,
         "latent_space_dimension": config.latent_space_dimension if latent_space_dimension is None else latent_space_dimension,
         "vis_during_training": config.vis_during_training if vis_during_training is None else vis_during_training,
