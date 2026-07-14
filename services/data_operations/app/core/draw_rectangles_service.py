@@ -44,13 +44,13 @@ class DrawRectanglesService:
 
         Args:
             dataset_type: Selected dataset name.
-            source: Source folder key (good or aug).
+            source: Source folder key ("good" or "aug").
 
         Returns:
             Path: The good folder, or the latest augmentation timestamp folder.
 
         Raises:
-            ValueError: If source is aug but no augmentation run exists yet.
+            ValueError: If source is "aug" but no augmentation run exists yet.
         """
         paths = dataset_paths(dataset_type)
         if source == "aug":
@@ -58,18 +58,24 @@ class DrawRectanglesService:
         return paths["good"]
 
     @staticmethod
-    def _process_image(image_path: str, target_dir: str, crop_size: int, size_of_cover: int) -> None:
+    def _process_image(image_path: str, target_dir: str, size_of_cover: int) -> None:
         """
         Draw a dominant-color square on one image and save it to the target directory.
+
+        The square is placed at a random position that keeps it fully inside the
+        image, computed from the loaded image's actual width and height.
 
         Args:
             image_path: Source image path.
             target_dir: Directory where the processed image is saved.
-            crop_size: Size used to limit the random square position.
-            size_of_cover: Width and height of the square.
+            size_of_cover: Width and height (in pixels) of the square.
 
         Returns:
             None
+
+        Raises:
+            ValueError: If the image cannot be read, or size_of_cover is larger
+                than the image's width or height.
         """
         image = cv2.imread(image_path, 1)
         if image is None:
@@ -77,17 +83,23 @@ class DrawRectanglesService:
 
         dominant_color = ColorThief(image_path).get_color(quality=1)
 
-        max_position = crop_size - size_of_cover
-        if max_position < 0:
-            raise ValueError("size_of_cover cannot be larger than crop_size")
+        height, width = image.shape[:2]
+        max_x = width - size_of_cover
+        max_y = height - size_of_cover
+        if max_x < 0 or max_y < 0:
+            raise ValueError(
+                f"size_of_cover ({size_of_cover}) is larger than the image "
+                f"({width}x{height}): {image_path}"
+            )
 
-        rand_x = random.randint(0, max_position)
-        rand_y = random.randint(0, max_position)
+        rand_x = random.randint(0, max_x)
+        rand_y = random.randint(0, max_y)
 
         covered_image = cv2.rectangle(
             img=image,
             pt1=(rand_x, rand_y),
-            pt2=(rand_x + size_of_cover, rand_y + size_of_cover),
+            pt2=(rand_x + size_of_cover - 1,
+                 rand_y + size_of_cover - 1),
             color=dominant_color,
             thickness=-1,
         )
@@ -101,15 +113,19 @@ class DrawRectanglesService:
         """
         Generate noisy rectangle images for a dataset.
 
+        Reads every image from source_dir, draws a random dominant-color square
+        on each in parallel, and writes them to a new timestamped noise run
+        folder together with a params.json describing the run.
+
         Args:
             dataset_type: Selected dataset name.
-            source: Source folder key used (good or aug).
+            source: Source folder key used ("good" or "aug").
             source_dir: Resolved directory to read images from.
             config: Loaded augmentation configuration.
             request_params: Query parameters of the run, saved into params.json.
 
         Returns:
-            DrawRectanglesResult: Summary of the processing.
+            DrawRectanglesResult: Summary of the processing (counts, paths, stopped).
         """
         DrawRectanglesService._stop_event.clear()
 
@@ -128,7 +144,6 @@ class DrawRectanglesService:
                     DrawRectanglesService._process_image,
                     image_path,
                     str(target_dir),
-                    config.crop_size,
                     config.size_of_cover,
                 )
                 for image_path in image_paths

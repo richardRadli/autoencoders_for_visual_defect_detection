@@ -1,7 +1,15 @@
 {
-  "kernel_size": [3, 4, 8],
-  "stride": [1, 2],
-  "padding": [0, 1],
+  "network_by_crop_size": {
+    "64": {
+      "kernel_size": [3, 4, 4],
+      "padding": [0, 1],
+      "stride": [1, 2]
+    },
+    "128": { "kernel_size": [3, 4, 8],  "padding": [0, 1], "stride": [1, 2] },
+    "256": { "kernel_size": [3, 4, 16], "padding": [0, 1], "stride": [1, 2] },
+    "512": { "kernel_size": [3, 4, 32], "padding": [0, 1], "stride": [1, 2] }
+  },
+
   "alpha_slope": 0.2,
 
   "flc": {
