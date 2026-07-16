@@ -15,12 +15,12 @@ export type BlockingRun<P, R> = {
 
 /*
  * Drives the synchronous data_operations runs: the POST blocks until the job
- * finishes, so there is no task id and nothing to poll — the promise itself is
+ * finishes, so there is no task id and nothing to poll. The promise itself is
  * the progress signal.
  *
  * Elapsed time is measured here, on the client, because no endpoint reports it.
- * It starts on submit and freezes when the promise settles; a page reload loses
- * it.
+ * It starts on submit and freezes when the promise settles. A page reload loses
+ * the timer state.
  */
 export function useBlockingRun<P, R>(
   run: (params: P) => Promise<R>,
@@ -37,6 +37,7 @@ export function useBlockingRun<P, R>(
 
   useEffect(() => {
     mounted.current = true
+
     return () => {
       mounted.current = false
     }
@@ -46,17 +47,20 @@ export function useBlockingRun<P, R>(
     if (state !== "running") {
       return
     }
+
     const id = window.setInterval(() => {
       if (startedAt.current !== null) {
         setElapsedMs(Date.now() - startedAt.current)
       }
     }, 1000)
+
     return () => window.clearInterval(id)
   }, [state])
 
   const start = useCallback(
     async (params: P) => {
       startedAt.current = Date.now()
+
       setState("running")
       setResult(null)
       setError(null)
@@ -64,17 +68,25 @@ export function useBlockingRun<P, R>(
       setStopping(false)
 
       try {
-        const res = await run(params)
+        const response = await run(params)
+
         if (!mounted.current) {
           return
         }
-        setResult(res)
+
+        setResult(response)
+        setError(null)
         setState("done")
-      } catch (e) {
+      } catch (runError) {
         if (!mounted.current) {
           return
         }
-        setError(e instanceof Error ? e.message : String(e))
+
+        setError(
+          runError instanceof Error
+            ? runError.message
+            : String(runError),
+        )
         setState("error")
       } finally {
         if (mounted.current && startedAt.current !== null) {
@@ -87,17 +99,32 @@ export function useBlockingRun<P, R>(
   )
 
   const stop = useCallback(async () => {
+    if (state !== "running" || stopping) {
+      return
+    }
+
+    setError(null)
     setStopping(true)
+
     try {
       await requestStop()
-    } catch {
-      // The run promise reports the real outcome; a failed stop signal alone
-      // is not something the user can act on.
+    } catch (stopError) {
+      if (!mounted.current) {
+        return
+      }
+
+      setError(
+        stopError instanceof Error
+          ? stopError.message
+          : String(stopError),
+      )
+      setStopping(false)
     }
-  }, [requestStop])
+  }, [requestStop, state, stopping])
 
   const reset = useCallback(() => {
     startedAt.current = null
+
     setState("idle")
     setResult(null)
     setError(null)
@@ -105,5 +132,14 @@ export function useBlockingRun<P, R>(
     setStopping(false)
   }, [])
 
-  return { state, result, error, elapsedMs, stopping, start, stop, reset }
+  return {
+    state,
+    result,
+    error,
+    elapsedMs,
+    stopping,
+    start,
+    stop,
+    reset,
+  }
 }
