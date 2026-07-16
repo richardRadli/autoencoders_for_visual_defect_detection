@@ -1,15 +1,55 @@
+import type { LucideIcon } from "lucide-react"
 import type { ButtonHTMLAttributes, ReactNode } from "react"
 
-type Variant = "primary" | "secondary" | "danger"
+import { Spinner } from "../Spinner/Spinner"
+import styles from "./Button.module.css"
 
-type ButtonProps = { variant?: Variant; children: ReactNode } & ButtonHTMLAttributes<HTMLButtonElement>
+export type ButtonVariant = "primary" | "secondary" | "danger"
 
-export function Button({ variant = "secondary", children, ...props }: ButtonProps) {
-  const className =
-    variant === "primary" ? "btn btn-primary" : variant === "danger" ? "btn btn-danger" : "btn"
+type ButtonProps = {
+  variant?: ButtonVariant
+  icon?: LucideIcon
+  iconPosition?: "left" | "right"
+  loading?: boolean
+  children: ReactNode
+} & ButtonHTMLAttributes<HTMLButtonElement>
+
+export function Button({
+  variant = "secondary",
+  icon: Icon,
+  iconPosition = "left",
+  loading = false,
+  children,
+  className,
+  disabled,
+  type = "button",
+  ...props
+}: ButtonProps) {
+  const classes = [
+    styles.button,
+    styles[variant],
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ")
+
+  let glyph: ReactNode = null
+  if (loading) {
+    glyph = <Spinner size="small" />
+  } else if (Icon) {
+    glyph = <Icon className={styles.icon} aria-hidden="true" />
+  }
+
   return (
-    <button className={className} {...props}>
-      {children}
+    <button
+      type={type}
+      className={classes}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {iconPosition === "left" ? glyph : null}
+      <span className={styles.label}>{children}</span>
+      {iconPosition === "right" ? glyph : null}
     </button>
   )
 }
