@@ -1,0 +1,37 @@
+.code {
+  max-height: 320px;
+  overflow: auto;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  white-space: pre;
+  tab-size: 2;
+}
+
+.key {
+  color: var(--json-key);
+}
+
+.string {
+  color: var(--json-string);
+}
+
+.number {
+  color: var(--json-number);
+}
+
+.null {
+  color: var(--json-null);
+}
+
+.empty {
+  padding: var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
