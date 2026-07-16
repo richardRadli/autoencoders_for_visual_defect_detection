@@ -1,62 +1,65 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
+import { Info } from "lucide-react"
+import { cloneElement, useId } from "react"
+import type { ReactElement, ReactNode } from "react"
 
-export function ParamField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  const [show, setShow] = useState(false)
+import { Tooltip } from "../Tooltip/Tooltip"
+import styles from "./ParamField.module.css"
+
+type ParamFieldChildProps = {
+  id?: string
+}
+
+type ParamFieldProps = {
+  label: string
+  tooltip?: ReactNode
+  hint?: ReactNode
+  children: ReactElement<ParamFieldChildProps>
+  className?: string
+}
+
+export function ParamField({
+  label,
+  tooltip,
+  hint,
+  children,
+  className,
+}: ParamFieldProps) {
+  const generatedId = useId()
+  const fieldId = children.props.id ?? generatedId
+  const field = children.props.id
+    ? children
+    : cloneElement(children, { id: fieldId })
+
+  const classes = [
+    styles.field,
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ")
 
   return (
-    <div>
-      <label className="field-label" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-        {label}
-        {hint && (
-          <span
-            style={{ position: "relative", display: "inline-flex", cursor: "help" }}
-            onMouseEnter={() => setShow(true)}
-            onMouseLeave={() => setShow(false)}
-          >
-            <span
-              style={{
-                width: 15,
-                height: 15,
-                borderRadius: "50%",
-                border: "0.5px solid var(--border-strong)",
-                color: "var(--text-muted)",
-                fontSize: 10,
-                fontStyle: "italic",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                lineHeight: 1,
-              }}
+    <div className={classes}>
+      <div className={styles.labelRow}>
+        <label className={styles.label} htmlFor={fieldId}>
+          {label}
+        </label>
+
+        {tooltip ? (
+          <Tooltip content={tooltip}>
+            <button
+              type="button"
+              className={styles.info}
+              aria-label={`About ${label}`}
             >
-              i
-            </span>
-            {show && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 6px)",
-                  left: 0,
-                  width: 200,
-                  background: "var(--surface-2)",
-                  border: "0.5px solid var(--border-strong)",
-                  borderRadius: 8,
-                  padding: "8px 10px",
-                  fontSize: 12,
-                  fontWeight: 400,
-                  color: "var(--text-secondary)",
-                  lineHeight: 1.4,
-                  zIndex: 10,
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                }}
-              >
-                {hint}
-              </span>
-            )}
-          </span>
-        )}
-      </label>
-      {children}
+              <Info className={styles.infoIcon} aria-hidden="true" />
+            </button>
+          </Tooltip>
+        ) : null}
+      </div>
+
+      {field}
+
+      {hint ? <p className={styles.hint}>{hint}</p> : null}
     </div>
   )
 }

@@ -1,0 +1,13 @@
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.controls .start {
+  flex: 1 1 auto;
+}
+
+.controls .stop {
+  flex: 0 0 auto;
+}
