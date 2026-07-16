@@ -30,7 +30,7 @@ export function Header() {
 
   const [guideOpen, setGuideOpen] = useState(false)
 
-  function openGuide() {
+  function handleGuideOpen() {
     dismissCoachmark()
     setGuideOpen(true)
   }
@@ -66,21 +66,30 @@ export function Header() {
         </div>
 
         <div className={styles.guideAnchor}>
-          <InfoButton onClick={openGuide} pulse={pulseInfoButton} />
+          <InfoButton onClick={handleGuideOpen} pulse={pulseInfoButton} />
 
           {showCoachmark ? (
-            <Coachmark fading={coachmarkFading} onDismiss={dismissCoachmark} />
+            <Coachmark
+              fading={coachmarkFading}
+              onDismiss={dismissCoachmark}
+            >
+              New here? Open the guide to see how it works.
+            </Coachmark>
           ) : null}
         </div>
 
         <IconButton
           icon={theme === "light" ? Moon : Sun}
-          label={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
+          label={
+            theme === "light"
+              ? "Switch to dark theme"
+              : "Switch to light theme"
+          }
           onClick={toggleTheme}
         />
       </div>
 
-      {guideOpen ? <GuideModal onClose={() => setGuideOpen(false)} /> : null}
+      <GuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
     </header>
   )
 }

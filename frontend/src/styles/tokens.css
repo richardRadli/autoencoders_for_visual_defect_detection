@@ -50,13 +50,18 @@
   --text-inverse:   #ffffff;
 
   /* --- Accent ----------------------------------------------------------- */
-  --accent:        var(--blue-600);
-  --accent-hover:  var(--blue-700);
-  --accent-active: var(--blue-800);
-  --accent-text:   var(--blue-700);
-  --accent-soft:   var(--blue-50);
-  --accent-border: var(--blue-200);
-  --accent-ring:   rgb(29 86 235 / 35%);
+  /* --accent is a filled surface; --accent-contrast is the ink that goes on
+     top of it. --accent-text is the opposite job: accent-coloured ink on a
+     normal surface. Keep the two apart — they move in opposite directions
+     between the themes. */
+  --accent:          var(--blue-600);
+  --accent-hover:    var(--blue-700);
+  --accent-active:   var(--blue-800);
+  --accent-contrast: #ffffff;
+  --accent-text:     var(--blue-700);
+  --accent-soft:     var(--blue-50);
+  --accent-border:   var(--blue-200);
+  --accent-ring:     rgb(29 86 235 / 35%);
 
   /* --- Semantic --------------------------------------------------------- */
   --success:        var(--green-600);
@@ -160,14 +165,18 @@
   --text-muted:     #767e8c;
   --text-inverse:   #0e1116;
 
-  --accent:          var(--blue-600);
-  --accent-hover:    var(--blue-700);
-  --accent-active:   var(--blue-800);
-  --accent-text:     var(--blue-700);
-  --accent-soft:     var(--blue-50);
-  --accent-border:   var(--blue-200);
-  --accent-ring:     rgb(29 86 235 / 35%);
-  --accent-contrast: #ffffff;
+  /* The accent inverts here: on a dark page the filled surface has to be the
+     light thing and the ink on it the dark thing, otherwise nothing clears
+     4.5:1. --accent doubles as the focus outline (base.css), so it must stay
+     light enough to be seen against --bg. */
+  --accent:          var(--blue-500);
+  --accent-hover:    var(--blue-400);
+  --accent-active:   var(--blue-300);
+  --accent-contrast: var(--gray-900);
+  --accent-text:     var(--blue-400);
+  --accent-soft:     rgb(59 118 246 / 16%);
+  --accent-border:   rgb(59 118 246 / 38%);
+  --accent-ring:     rgb(59 118 246 / 45%);
 
   --success:        #4ade80;
   --success-soft:   rgb(30 142 62 / 16%);

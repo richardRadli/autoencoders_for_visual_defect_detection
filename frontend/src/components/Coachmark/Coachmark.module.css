@@ -1,0 +1,78 @@
+.coachmark {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: var(--z-coachmark);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: max-content;
+  max-width: 264px;
+  padding: var(--space-3);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-lg);
+  animation: coachmark-in var(--transition-base) both;
+}
+
+/* The hook flips to "fading" and hides the coachmark 320ms later, so this
+   animation must stay at --transition-slow (320ms) or it will be cut off
+   mid-fade. See FADE_DURATION_MS in useFirstVisit.ts. */
+.fading {
+  pointer-events: none;
+  animation: coachmark-out var(--transition-slow) both;
+}
+
+.arrow {
+  position: absolute;
+  top: -5px;
+  right: 14px;
+  width: 8px;
+  height: 8px;
+  border-top: 1px solid var(--accent-border);
+  border-left: 1px solid var(--accent-border);
+  background-color: var(--surface);
+  transform: rotate(45deg);
+}
+
+.message {
+  margin: 0;
+  padding-top: var(--space-1);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.dismiss {
+  margin-top: -2px;
+}
+
+@keyframes coachmark-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes coachmark-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coachmark,
+  .fading {
+    animation-duration: 1ms;
+  }
+}
