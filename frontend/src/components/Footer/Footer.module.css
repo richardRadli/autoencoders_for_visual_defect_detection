@@ -1,0 +1,14 @@
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--page-pad);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.text {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
