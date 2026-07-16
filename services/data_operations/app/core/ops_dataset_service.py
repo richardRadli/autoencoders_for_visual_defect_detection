@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from shared.core.path_bindings import dataset_paths
-from utils.system_utils import file_reader, find_latest_valid_run, sample_evenly, safe_image_path
+from utils.system_utils import file_reader, find_latest_directory, sample_evenly, safe_image_path
 
 
 PREVIEW_TYPES = ("good", "aug", "noise")
@@ -13,11 +13,11 @@ class DatasetService:
     @staticmethod
     def get_readiness(dataset_type: str) -> dict:
         """
-        Report whether augmentation and draw-rectangles have a finished run.
+        Report whether augmentation and draw-rectangles have a run.
 
-        A step is ready when its latest non-stopped run exists and holds at
-        least one image. Returns flat facts; the workflow logic lives on the
-        frontend.
+        A step is ready when its latest run (including a stopped one) exists and
+        holds at least one image. Returns flat facts; the workflow logic lives on
+        the frontend.
 
         Args:
             dataset_type: Selected dataset name.
@@ -27,11 +27,17 @@ class DatasetService:
         """
         paths = dataset_paths(dataset_type)
 
-        aug_run = find_latest_valid_run(paths["aug"])
-        aug_images = len(file_reader(str(aug_run), "png", "jpg")) if aug_run else 0
+        try:
+            aug_run = find_latest_directory(str(paths["aug"]))
+            aug_images = len(file_reader(str(aug_run), "png", "jpg"))
+        except ValueError:
+            aug_images = 0
 
-        noise_run = find_latest_valid_run(paths["noise"])
-        noise_images = len(file_reader(str(noise_run), "png", "jpg")) if noise_run else 0
+        try:
+            noise_run = find_latest_directory(str(paths["noise"]))
+            noise_images = len(file_reader(str(noise_run), "png", "jpg"))
+        except ValueError:
+            noise_images = 0
 
         return {
             "dataset_type": dataset_type,
@@ -44,20 +50,23 @@ class DatasetService:
         """
         Resolve the folder a preview type reads images from.
 
-        'good' is a flat folder; 'aug' and 'noise' use their latest non-stopped
-        run folder.
+        'good' is a flat folder; 'aug' and 'noise' use their latest run folder
+        (including a stopped one).
 
         Args:
             dataset_type: Selected dataset name.
             preview_type: One of good / aug / noise.
 
         Returns:
-            Path | None: The folder to list, or None if there is no valid run.
+            Path | None: The folder to list, or None if there is no run.
         """
         root = dataset_paths(dataset_type)[preview_type]
         if preview_type == "good":
             return root if root.is_dir() else None
-        return find_latest_valid_run(root)
+        try:
+            return Path(find_latest_directory(str(root)))
+        except ValueError:
+            return None
 
     @staticmethod
     def get_preview_list(dataset_type: str, preview_type: str, limit: int = 5) -> list[str]:

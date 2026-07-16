@@ -3,8 +3,8 @@ from pathlib import Path
 from shared.core.path_bindings import dataset_paths, training_testing_paths
 from utils.system_utils import (
     file_reader,
+    find_latest_directory,
     find_latest_file_in_latest_directory,
-    find_latest_valid_run,
     list_subdirectories,
     read_json_safely,
     sample_evenly,
@@ -33,8 +33,8 @@ class DatasetService:
         """
         Report available training inputs and trained network types.
 
-        Augmentation and noise facts come from their latest completed,
-        non-stopped runs. A network is listed as trained only when the model
+        Augmentation and noise facts come from their latest run (including a
+        stopped one). A network is listed as trained only when the model
         selection used by testing finds a weight and the required training
         metadata is available beside it.
 
@@ -46,17 +46,17 @@ class DatasetService:
         """
         paths = dataset_paths(dataset_type)
 
-        aug_run = find_latest_valid_run(paths["aug"])
-        aug_images = (
-            len(file_reader(str(aug_run), "png", "jpg"))
-            if aug_run else 0
-        )
+        try:
+            aug_run = find_latest_directory(str(paths["aug"]))
+            aug_images = len(file_reader(str(aug_run), "png", "jpg"))
+        except ValueError:
+            aug_images = 0
 
-        noise_run = find_latest_valid_run(paths["noise"])
-        noise_images = (
-            len(file_reader(str(noise_run), "png", "jpg"))
-            if noise_run else 0
-        )
+        try:
+            noise_run = find_latest_directory(str(paths["noise"]))
+            noise_images = len(file_reader(str(noise_run), "png", "jpg"))
+        except ValueError:
+            noise_images = 0
 
         trained_networks = [
             network_type
