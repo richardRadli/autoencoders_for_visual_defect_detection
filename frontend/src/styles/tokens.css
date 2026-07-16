@@ -159,13 +159,14 @@
   --text-muted:     #767e8c;
   --text-inverse:   #0e1116;
 
-  --accent:        var(--blue-500);
-  --accent-hover:  var(--blue-400);
-  --accent-active: var(--blue-300);
-  --accent-text:   var(--blue-300);
-  --accent-soft:   rgb(59 118 246 / 12%);
-  --accent-border: rgb(59 118 246 / 32%);
-  --accent-ring:   rgb(59 118 246 / 40%);
+  --accent:          var(--blue-600);
+  --accent-hover:    var(--blue-700);
+  --accent-active:   var(--blue-800);
+  --accent-text:     var(--blue-700);
+  --accent-soft:     var(--blue-50);
+  --accent-border:   var(--blue-200);
+  --accent-ring:     rgb(29 86 235 / 35%);
+  --accent-contrast: #ffffff;
 
   --success:        #4ade80;
   --success-soft:   rgb(30 142 62 / 16%);
