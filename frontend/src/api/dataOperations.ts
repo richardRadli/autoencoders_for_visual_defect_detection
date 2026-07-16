@@ -1,48 +1,76 @@
-import { DATA_OPS, apiPost, buildQuery } from "./client"
+import { DATA_OPS, apiGet, apiPost, buildUrl } from "./client"
+import type {
+  AugmentationParams,
+  AugmentationResult,
+  DatasetType,
+  DrawRectanglesParams,
+  DrawRectanglesResult,
+  OpsPreviewList,
+  OpsPreviewType,
+  OpsReadiness,
+  StopResult,
+} from "./types"
 
-export type AugmentationParams = {
-  dataset_type: string
-  img_size?: number
-  crop_size?: number
-  rotate_count?: number
-  horizontal_flip_count?: number
-  vertical_flip_count?: number
+/* Runs ------------------------------------------------------------------- */
+
+/* The run endpoints block until the job finishes and return the whole result
+   in one response — there is no task id and nothing to poll. They take no
+   AbortSignal on purpose: aborting the fetch would drop the response but keep
+   the job running on the server. Use the stop endpoints for that. */
+
+export function runAugmentation(params: AugmentationParams): Promise<AugmentationResult> {
+  return apiPost<AugmentationResult>(buildUrl(DATA_OPS, "/augmentation/run", params))
 }
 
-export type AugmentationResult = {
-  status: string
-  dataset_type: string
-  source_images: number
-  augmented_images: number
-  processed_images: number
-  source_dir: string
-  target_dir: string
-  warning?: string
+export function stopAugmentation(): Promise<StopResult> {
+  return apiPost<StopResult>(`${DATA_OPS}/augmentation/stop`)
 }
 
-export type DrawRectanglesParams = {
-  dataset_type: string
-  source?: string
-  size_of_cover?: number
+export function runDrawRectangles(
+  params: DrawRectanglesParams,
+): Promise<DrawRectanglesResult> {
+  return apiPost<DrawRectanglesResult>(buildUrl(DATA_OPS, "/draw-rectangles/run", params))
 }
 
-export type DrawRectanglesResult = {
-  status: string
-  dataset_type: string
-  source: string
-  processed_images: number
-  source_dir: string
-  target_dir: string
+export function stopDrawRectangles(): Promise<StopResult> {
+  return apiPost<StopResult>(`${DATA_OPS}/draw-rectangles/stop`)
 }
 
-export const runAugmentation = (params: AugmentationParams) =>
-  apiPost<AugmentationResult>(`${DATA_OPS}/augmentation/run${buildQuery(params)}`)
+/* Dataset ---------------------------------------------------------------- */
 
-export const stopAugmentation = () =>
-  apiPost<{ status: string; service: string }>(`${DATA_OPS}/augmentation/stop`)
+export function getOpsReadiness(
+  dataset_type: DatasetType,
+  signal?: AbortSignal,
+): Promise<OpsReadiness> {
+  return apiGet<OpsReadiness>(
+    buildUrl(DATA_OPS, "/dataset/readiness", { dataset_type }),
+    signal,
+  )
+}
 
-export const runDrawRectangles = (params: DrawRectanglesParams) =>
-  apiPost<DrawRectanglesResult>(`${DATA_OPS}/draw-rectangles/run${buildQuery(params)}`)
+export function getOpsPreview(
+  dataset_type: DatasetType,
+  preview_type: OpsPreviewType,
+  limit = 5,
+  signal?: AbortSignal,
+): Promise<OpsPreviewList> {
+  return apiGet<OpsPreviewList>(
+    buildUrl(DATA_OPS, "/dataset/preview", { dataset_type, preview_type, limit }),
+    signal,
+  )
+}
 
-export const stopDrawRectangles = () =>
-  apiPost<{ status: string; service: string }>(`${DATA_OPS}/draw-rectangles/stop`)
+/* Preview images are rendered by the browser, not fetched as JSON, so this
+   returns a URL for <img src> rather than a promise. The name must be an
+   entry taken verbatim from getOpsPreview's images list. */
+export function opsPreviewImageUrl(
+  dataset_type: DatasetType,
+  preview_type: OpsPreviewType,
+  name: string,
+): string {
+  return buildUrl(DATA_OPS, "/dataset/preview/image", {
+    dataset_type,
+    preview_type,
+    name,
+  })
+}
