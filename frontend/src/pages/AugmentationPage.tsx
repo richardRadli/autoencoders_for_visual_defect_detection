@@ -28,6 +28,7 @@ const RUN_BADGE: Record<RunState, { variant: BadgeVariant; label: string }> = {
   idle: { variant: "neutral", label: "Idle" },
   running: { variant: "accent", label: "Running" },
   done: { variant: "success", label: "Done" },
+  stopped: { variant: "warning", label: "Stopped" },
   error: { variant: "danger", label: "Failed" },
 }
 
@@ -57,7 +58,7 @@ export function AugmentationPage() {
   const result = run.result
 
   useEffect(() => {
-    if (run.state === "done") {
+    if (run.state === "done" || run.state === "stopped") {
       preview.reload()
     }
   }, [run.state, preview.reload])

@@ -27,10 +27,11 @@ const RUN_BADGE: Record<RunState, { variant: BadgeVariant; label: string }> = {
   idle: { variant: "neutral", label: "Idle" },
   running: { variant: "accent", label: "Running" },
   done: { variant: "success", label: "Done" },
+  stopped: { variant: "warning", label: "Stopped" },
   error: { variant: "danger", label: "Failed" },
 }
 
-/* An empty field means "let the server decide" — buildQuery drops undefined,
+/* An empty field means "let the server decide" - buildQuery drops undefined,
    so the parameter is left out of the request entirely. */
 function toNumber(value: string): number | undefined {
   const trimmed = value.trim()
@@ -50,12 +51,10 @@ export function DrawRectanglesPage() {
 
   const run = useBlockingRun(runDrawRectangles, stopDrawRectangles)
   const preview = useOpsPreview(datasetType, "noise")
-
   const result = run.result
 
-  // A finished run writes new images; the preview still holds the old ones.
   useEffect(() => {
-    if (run.state === "done") {
+    if (run.state === "done" || run.state === "stopped") {
       preview.reload()
     }
   }, [run.state, preview.reload])
@@ -117,6 +116,7 @@ export function DrawRectanglesPage() {
                 }
               >
                 <option value="">Server default</option>
+
                 {SOURCE_IMAGES.map((value) => (
                   <option key={value} value={value}>
                     {value}
@@ -163,9 +163,18 @@ export function DrawRectanglesPage() {
                   label: "State",
                   value: <Badge variant={badge.variant}>{badge.label}</Badge>,
                 },
-                { label: "Elapsed", value: formatElapsedTime(run.elapsedMs) },
-                { label: "Source used", value: result?.source },
-                { label: "Processed images", value: result?.processed_images },
+                {
+                  label: "Elapsed",
+                  value: formatElapsedTime(run.elapsedMs),
+                },
+                {
+                  label: "Source used",
+                  value: result?.source,
+                },
+                {
+                  label: "Processed images",
+                  value: result?.processed_images,
+                },
               ]}
             />
 

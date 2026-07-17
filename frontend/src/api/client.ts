@@ -53,6 +53,75 @@ export function buildUrl(
   return `${base}${path}${params ? buildQuery(params) : ""}`
 }
 
+function humanizeFieldName(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null
+  }
+
+  const normalized = value.replace(/_/g, " ").trim()
+
+  if (normalized === "") {
+    return null
+  }
+
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+}
+
+function formatValidationItem(item: unknown): string | null {
+  if (typeof item !== "object" || item === null) {
+    return null
+  }
+
+  const validationError = item as Record<string, unknown>
+
+  if (typeof validationError.msg !== "string") {
+    return null
+  }
+
+  const location = Array.isArray(validationError.loc)
+    ? validationError.loc
+    : []
+
+  const field =
+    location.length > 0
+      ? humanizeFieldName(location[location.length - 1])
+      : null
+
+  return field
+    ? `${field}: ${validationError.msg}`
+    : validationError.msg
+}
+
+function formatApiDetail(detail: unknown, fallback: string): string {
+  if (typeof detail === "string") {
+    return detail
+  }
+
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map(formatValidationItem)
+      .filter((message): message is string => message !== null)
+
+    if (messages.length > 0) {
+      return messages.join("; ")
+    }
+  }
+
+  if (detail !== undefined && detail !== null) {
+    try {
+      const serialized = JSON.stringify(detail)
+
+      if (serialized) {
+        return serialized
+      }
+    } catch {
+      // Fall back to the HTTP status text.
+    }
+  }
+
+  return fallback
+}
+
 async function request<T>(
   path: string,
   options?: RequestInit,
@@ -63,13 +132,17 @@ async function request<T>(
     let detail = response.statusText
 
     try {
-      const body = await response.json()
+      const body = (await response.json()) as unknown
 
-      if (body?.detail) {
-        detail =
-          typeof body.detail === "string"
-            ? body.detail
-            : JSON.stringify(body.detail)
+      if (
+        typeof body === "object" &&
+        body !== null &&
+        "detail" in body
+      ) {
+        detail = formatApiDetail(
+          (body as Record<string, unknown>).detail,
+          detail,
+        )
       }
     } catch {
       // The response has no JSON error body.

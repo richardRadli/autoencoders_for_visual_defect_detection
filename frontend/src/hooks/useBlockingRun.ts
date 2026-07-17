@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-export type RunState = "idle" | "running" | "done" | "error"
+export type RunState =
+  | "idle"
+  | "running"
+  | "done"
+  | "stopped"
+  | "error"
 
 export type BlockingRun<P, R> = {
   state: RunState
@@ -76,7 +81,16 @@ export function useBlockingRun<P, R>(
 
         setResult(response)
         setError(null)
-        setState("done")
+
+        const responseStatus =
+          typeof response === "object" &&
+          response !== null &&
+          "status" in response &&
+          typeof response.status === "string"
+            ? response.status.toLowerCase()
+            : null
+
+        setState(responseStatus === "stopped" ? "stopped" : "done")
       } catch (runError) {
         if (!mounted.current) {
           return
