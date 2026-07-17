@@ -1,0 +1,21 @@
+.app {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1 1 auto;
+  padding: var(--page-pad);
+}
+
+.content {
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+  .main {
+    padding: var(--page-pad-sm);
+  }
+}
