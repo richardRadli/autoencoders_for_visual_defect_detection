@@ -10,8 +10,6 @@
   width: max-content;
   max-width: min(240px, calc(100vw - 32px));
   padding: var(--space-2) var(--space-3);
-  visibility: hidden;
-  opacity: 0;
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
@@ -24,11 +22,6 @@
   white-space: normal;
   overflow-wrap: anywhere;
   pointer-events: none;
-}
-
-.open {
-  visibility: visible;
-  opacity: 1;
   animation: fade-in var(--transition-fast);
 }
 

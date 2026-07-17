@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom"
-
+import { AugmentationPage } from "./pages/AugmentationPage"
 import { Footer } from "./components/Footer/Footer"
 import { Header } from "./components/Header/Header"
 import { DrawRectanglesPage } from "./pages/DrawRectanglesPage"
@@ -20,7 +20,7 @@ function App() {
             <Route path="/draw-rectangles" element={<DrawRectanglesPage />} />
             <Route path="/training" element={<TrainingPage />} />
             <Route path="/testing" element={<TestingPage />} />
-            {/* /augmentation lands here until AugmentationPage exists. */}
+            <Route path="/augmentation" element={<AugmentationPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
