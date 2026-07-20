@@ -173,8 +173,8 @@ export function TrainingPage() {
   const [earlyStopping, setEarlyStopping] = useState(
     toInputValue(restored?.early_stopping),
   )
-  const [seed, setSeed] = useState(
-    toInputValue(restored?.seed),
+  const [seed, setSeed] = useState<OptionalBoolean>(
+    toBooleanField(restored?.seed),
   )
 
   const readiness = useReadiness(
@@ -247,7 +247,7 @@ export function TrainingPage() {
       ),
       vis_interval: toNumber(visInterval),
       early_stopping: toNumber(earlyStopping),
-      seed: toNumber(seed),
+      seed: toOptionalBoolean(seed),
     }
 
     void task.start(params)
@@ -352,6 +352,7 @@ export function TrainingPage() {
                 min={0}
                 max={1}
                 step="0.01"
+                placeholder="e.g. 0.2"
                 value={validationSplit}
                 onChange={(event) =>
                   setValidationSplit(event.target.value)
@@ -368,6 +369,7 @@ export function TrainingPage() {
                 type="number"
                 min={1}
                 step={1}
+                placeholder="e.g. 200"
                 value={epochs}
                 onChange={(event) =>
                   setEpochs(event.target.value)
@@ -384,6 +386,7 @@ export function TrainingPage() {
                 type="number"
                 min={1}
                 step={1}
+                placeholder="e.g. 128"
                 value={batchSize}
                 onChange={(event) =>
                   setBatchSize(event.target.value)
@@ -400,6 +403,7 @@ export function TrainingPage() {
                 type="number"
                 min={0}
                 step="any"
+                placeholder="e.g. 0.0002"
                 value={learningRate}
                 onChange={(event) =>
                   setLearningRate(event.target.value)
@@ -434,6 +438,7 @@ export function TrainingPage() {
                 type="number"
                 min={1}
                 step={1}
+                placeholder="e.g. 15"
                 value={stepSize}
                 onChange={(event) =>
                   setStepSize(event.target.value)
@@ -450,6 +455,7 @@ export function TrainingPage() {
                 type="number"
                 min={0}
                 step="any"
+                placeholder="e.g. 0.5"
                 value={gamma}
                 onChange={(event) =>
                   setGamma(event.target.value)
@@ -484,6 +490,7 @@ export function TrainingPage() {
                 type="number"
                 min={1}
                 step={1}
+                placeholder="e.g. 100"
                 value={latentSpaceDimension}
                 onChange={(event) =>
                   setLatentSpaceDimension(
@@ -520,6 +527,7 @@ export function TrainingPage() {
                 type="number"
                 min={1}
                 step={1}
+                placeholder="e.g. 10"
                 value={visInterval}
                 onChange={(event) =>
                   setVisInterval(event.target.value)
@@ -536,6 +544,7 @@ export function TrainingPage() {
                 type="number"
                 min={1}
                 step={1}
+                placeholder="e.g. 10"
                 value={earlyStopping}
                 onChange={(event) =>
                   setEarlyStopping(event.target.value)
@@ -545,18 +554,20 @@ export function TrainingPage() {
 
             <ParamField
               label="seed"
-              hint="Server default when empty."
-              tooltip="Random seed. Minimum: 0. Leave empty to use the server default."
+              tooltip="true fixes the random seed so runs are reproducible. false lets it vary."
             >
-              <input
-                type="number"
-                min={0}
-                step={1}
+              <select
                 value={seed}
                 onChange={(event) =>
-                  setSeed(event.target.value)
+                  setSeed(
+                    event.target.value as OptionalBoolean,
+                  )
                 }
-              />
+              >
+                <option value="">Server default</option>
+                <option value="true">true</option>
+                <option value="false">false</option>
+              </select>
             </ParamField>
           </div>
 

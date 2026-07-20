@@ -55,7 +55,7 @@ async def run_training(
     vis_during_training: bool | None = Query(None, description="Save visualizations during training (true/false) — empty = json default"),
     vis_interval: int | None = Query(None, ge=1, description="Visualization interval in epochs, whole number, e.g. 10 — empty = json default"),
     early_stopping: int | None = Query(None, ge=1, description="Early-stopping patience in epochs, whole number, e.g. 10 — empty = json default"),
-    seed: int | None = Query(None, ge=0, description="Random seed, whole number; empty = json default (no fixed seed)"),
+    seed: bool | None = Query(None, description="Fix the random seed for reproducible runs (true/false) — empty = json default"),
 ):
     """
     Resolve the training setup for the selected network.
@@ -81,7 +81,7 @@ async def run_training(
         vis_during_training: Optional override for training visualizations.
         vis_interval: Optional override for the visualization interval.
         early_stopping: Optional override for the early-stopping patience.
-        seed: Optional override for the random seed.
+        seed: Optional override for whether the random seed is fixed.
 
     Returns:
         dict: The resolved network type and the effective training parameters.

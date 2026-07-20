@@ -22,7 +22,7 @@ class TrainingConfig:
     vis_during_training: bool
     vis_interval: int
     early_stopping: int
-    seed: int | bool
+    seed: bool
 
 
 class TrainingConfigService:

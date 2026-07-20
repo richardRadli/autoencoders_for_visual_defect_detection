@@ -224,7 +224,7 @@ export type TrainingParams = {
   vis_during_training?: boolean
   vis_interval?: number
   early_stopping?: number
-  seed?: number
+  seed?: boolean
 }
 
 export type TestingParams = {
