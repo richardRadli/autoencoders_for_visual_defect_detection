@@ -1,6 +1,5 @@
-import { ArrowRight } from "lucide-react"
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState } from "react"
+import { Link } from "react-router-dom"
 
 import {
   getDefectReadiness,
@@ -25,14 +24,12 @@ import type {
   Stride,
   SubtestFolder,
   TestMetricsResult,
-  TestReconstructionResult,
   TestResult,
   TestingParams,
 } from "../api/types"
 import { Badge } from "../components/Badge/Badge"
 import type { BadgeVariant } from "../components/Badge/Badge"
 import { Breadcrumb } from "../components/Breadcrumb/Breadcrumb"
-import { Button } from "../components/Button/Button"
 import { JsonPanel } from "../components/JsonPanel/JsonPanel"
 import { PageNav } from "../components/PageNav/PageNav"
 import { Panel } from "../components/Panel/Panel"
@@ -40,22 +37,14 @@ import { ParamField } from "../components/ParamField/ParamField"
 import { PreviewGrid } from "../components/PreviewGrid/PreviewGrid"
 import { RunControls } from "../components/RunControls/RunControls"
 import { StatusGrid } from "../components/StatusGrid/StatusGrid"
-import type { StatusItem } from "../components/StatusGrid/StatusGrid"
 import { useDefectPreview } from "../hooks/usePreview"
-import { useReadiness } from "../hooks/useReadiness"
 import type { TaskRunState } from "../hooks/useTaskPolling"
 import { useTaskPolling } from "../hooks/useTaskPolling"
+import { useReadiness } from "../hooks/useReadiness"
 import { formatElapsedTime } from "../utils/format"
 import styles from "./TestingPage.module.css"
 
-type OptionalBoolean = "" | "true" | "false"
-
-type SubmittedTest = {
-  datasetType: DatasetType
-  networkType: NetworkType
-  subtestFolder: SubtestFolder
-  visResults: boolean
-}
+const TESTING_TASK_STORAGE_KEY = "defect-detection:testing-task"
 
 const NETWORK_TYPE_MAP: Record<
   AEType,
@@ -78,9 +67,11 @@ const RUN_BADGE: Record<
   idle: { variant: "neutral", label: "Idle" },
   running: { variant: "accent", label: "Running" },
   done: { variant: "success", label: "Done" },
-  stopped: { variant: "warning", label: "Stopped" },
   error: { variant: "danger", label: "Failed" },
+  stopped: { variant: "warning", label: "Stopped" },
 }
+
+type OptionalBoolean = "" | "true" | "false"
 
 function toNumber(value: string): number | undefined {
   const trimmed = value.trim()
@@ -93,27 +84,41 @@ function toNumber(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
-function toBoolean(value: OptionalBoolean): boolean | undefined {
-  if (value === "") {
-    return undefined
-  }
-
-  return value === "true"
+function toInputValue(value: number | undefined): string {
+  return value === undefined ? "" : String(value)
 }
 
-function optionLabel(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1)
-}
-
-function formatMetric(
-  value: number | undefined,
-  digits: number,
-): string | undefined {
-  if (value === undefined) {
-    return undefined
+function toBooleanField(value: boolean | undefined): OptionalBoolean {
+  if (value === true) {
+    return "true"
   }
 
-  return Number.isFinite(value) ? value.toFixed(digits) : String(value)
+  if (value === false) {
+    return "false"
+  }
+
+  return ""
+}
+
+function toOptionalBoolean(
+  value: OptionalBoolean,
+): boolean | undefined {
+  if (value === "true") {
+    return true
+  }
+
+  if (value === "false") {
+    return false
+  }
+
+  return undefined
+}
+
+function resolveNetworkType(
+  aeType: AEType,
+  modelSize: ModelSize,
+): NetworkType {
+  return NETWORK_TYPE_MAP[aeType][modelSize]
 }
 
 function isMetricsResult(
@@ -122,187 +127,135 @@ function isMetricsResult(
   return result !== null && "auc_roc" in result
 }
 
-function isReconstructionResult(
+function resolvePreviewType(
+  taskState: TaskRunState,
   result: TestResult | null,
-): result is TestReconstructionResult {
-  return result !== null && "reconstructed_images" in result
+  submittedParams: TestingParams | null,
+): DefectPreviewType {
+  if (taskState !== "done" || result === null) {
+    return "test"
+  }
+
+  if ("reconstructed_images" in result) {
+    return "reconstruction"
+  }
+
+  if (submittedParams?.vis_results === true) {
+    return "reconstruction_vis"
+  }
+
+  return "roc_plot"
 }
 
 export function TestingPage() {
-  const navigate = useNavigate()
-
-  const [datasetType, setDatasetType] =
-    useState<DatasetType>("texture_1")
-  const [aeType, setAeType] = useState<AEType>("plain")
-  const [modelSize, setModelSize] = useState<ModelSize>("base")
-  const [subtestFolder, setSubtestFolder] =
-    useState<SubtestFolder>("defective")
-  const [stride, setStride] = useState<Stride>(32)
-
-  const [numOfSteps, setNumOfSteps] = useState("")
-  const [thresholdInit, setThresholdInit] = useState("")
-  const [thresholdEnd, setThresholdEnd] = useState("")
-  const [visResults, setVisResults] =
-    useState<OptionalBoolean>("")
-  const [visReconstruction, setVisReconstruction] =
-    useState<OptionalBoolean>("")
-  const [visInterval, setVisInterval] = useState("")
-
-  const [submitted, setSubmitted] =
-    useState<SubmittedTest | null>(null)
-
-  const readiness = useReadiness(getDefectReadiness, datasetType)
-
-  const run = useTaskPolling<TestingParams, TestResult>(
+  const task = useTaskPolling<TestingParams, TestResult>(
     runTesting,
     getTestingStatus,
     stopTesting,
+    {
+      storageKey: TESTING_TASK_STORAGE_KEY,
+      intervalMs: 2000,
+    },
   )
 
-  useEffect(() => {
-    const allowed = VALID_SUBTESTS[datasetType]
+  const restored = task.submittedParams
+  const initialDatasetType =
+    restored?.dataset_type ?? "texture_1"
 
-    if (!allowed.includes(subtestFolder)) {
-      const firstAllowed = allowed[0]
+  const [datasetType, setDatasetType] =
+    useState<DatasetType>(initialDatasetType)
 
-      if (firstAllowed) {
-        setSubtestFolder(firstAllowed)
-      }
-    }
-  }, [datasetType, subtestFolder])
+  const [aeType, setAeType] = useState<AEType>(
+    restored?.ae_type ?? "plain",
+  )
 
-  const selectedNetwork = NETWORK_TYPE_MAP[aeType][modelSize]
-  const result = run.result
-  const badge = RUN_BADGE[run.state]
+  const [modelSize, setModelSize] = useState<ModelSize>(
+    restored?.model_size ?? "base",
+  )
 
-  const hasSelectedModel =
-    readiness.data?.trained_networks.includes(selectedNetwork) ?? false
+  const [subtestFolder, setSubtestFolder] =
+    useState<SubtestFolder>(
+      restored?.subtest_folder ??
+        VALID_SUBTESTS[initialDatasetType][0],
+    )
 
-  const thresholdInitValue = toNumber(thresholdInit)
-  const thresholdEndValue = toNumber(thresholdEnd)
+  const [stride, setStride] = useState<Stride>(
+    restored?.stride ?? 32,
+  )
 
-  let configurationError: string | null = null
+  const [numOfSteps, setNumOfSteps] = useState(
+    toInputValue(restored?.num_of_steps),
+  )
 
-  if (
+  const [thresholdInit, setThresholdInit] = useState(
+    toInputValue(restored?.threshold_init),
+  )
+
+  const [thresholdEnd, setThresholdEnd] = useState(
+    toInputValue(restored?.threshold_end),
+  )
+
+  const [visResults, setVisResults] =
+    useState<OptionalBoolean>(
+      toBooleanField(restored?.vis_results),
+    )
+
+  const [visReconstruction, setVisReconstruction] =
+    useState<OptionalBoolean>(
+      toBooleanField(restored?.vis_reconstruction),
+    )
+
+  const [visInterval, setVisInterval] = useState(
+    toInputValue(restored?.vis_interval),
+  )
+
+  const readiness = useReadiness(
+    getDefectReadiness,
+    datasetType,
+  )
+
+  const selectedNetworkType = resolveNetworkType(
+    aeType,
+    modelSize,
+  )
+
+  const modelReady =
+    readiness.data?.trained_networks.includes(
+      selectedNetworkType,
+    ) === true
+
+  const visualizationConflict =
     visResults === "true" &&
     visReconstruction === "true"
-  ) {
-    configurationError =
-      "Result visualizations and reconstruction-only mode cannot both be enabled."
-  } else if (
-    thresholdInitValue !== undefined &&
-    thresholdEndValue !== undefined &&
-    thresholdInitValue >= thresholdEndValue
-  ) {
-    configurationError =
-      "Threshold start must be smaller than threshold end."
-  }
 
-  const prerequisiteMessage =
-    readiness.data && !hasSelectedModel
-      ? `No trained ${selectedNetwork} model is available for ${datasetType}.`
-      : null
+  const parsedThresholdInit = toNumber(thresholdInit)
+  const parsedThresholdEnd = toNumber(thresholdEnd)
+
+  const thresholdOrderInvalid =
+    parsedThresholdInit !== undefined &&
+    parsedThresholdEnd !== undefined &&
+    parsedThresholdInit >= parsedThresholdEnd
 
   const startDisabled =
     readiness.loading ||
-    readiness.data === null ||
     readiness.error !== null ||
-    prerequisiteMessage !== null ||
-    configurationError !== null
+    !modelReady ||
+    visualizationConflict ||
+    thresholdOrderInvalid
 
-  const output =
-    result ??
-    (run.taskId
-      ? {
-          task_id: run.taskId,
-          status: run.taskState ?? "QUEUED",
-        }
-      : null)
+  function handleDatasetChange(nextDataset: DatasetType) {
+    setDatasetType(nextDataset)
 
-  const statusItems: StatusItem[] = [
-    {
-      label: "State",
-      value: (
-        <Badge variant={badge.variant}>
-          {badge.label}
-        </Badge>
-      ),
-    },
-    {
-      label: "Elapsed",
-      value: formatElapsedTime(run.elapsedMs),
-    },
-    {
-      label: "Task status",
-      value: run.taskState ?? undefined,
-    },
-    {
-      label: "Network",
-      value:
-        result?.network_type ??
-        submitted?.networkType ??
-        undefined,
-    },
-  ]
-
-  if (isMetricsResult(result)) {
-    statusItems.push(
-      {
-        label: "ROC AUC",
-        value: formatMetric(result.auc_roc, 4),
-      },
-      {
-        label: "Average SSIM",
-        value: formatMetric(result.avg_ssim, 4),
-      },
-      {
-        label: "Average MSE",
-        value: formatMetric(result.mse_avg, 2),
-      },
-    )
-  }
-
-  if (isReconstructionResult(result)) {
-    statusItems.push({
-      label: "Reconstructed images",
-      value: result.reconstructed_images,
-    })
-  }
-
-  let previewDataset = datasetType
-  let previewSubtest = subtestFolder
-  let previewNetwork = selectedNetwork
-  let previewType: DefectPreviewType = "test"
-  let previewTitle = "Test images"
-
-  if (result && submitted) {
-    previewDataset = result.dataset_type
-    previewNetwork = result.network_type
-
-    if (isReconstructionResult(result)) {
-      previewType = "reconstruction"
-      previewTitle = "Reconstructed images"
-      previewSubtest = submitted.subtestFolder
-    } else {
-      previewSubtest = result.subtest_folder
-
-      if (submitted.visResults) {
-        previewType = "reconstruction_vis"
-        previewTitle = "Result visualizations"
-      } else {
-        previewType = "roc_plot"
-        previewTitle = "ROC plot"
-      }
+    if (
+      !VALID_SUBTESTS[nextDataset].includes(
+        subtestFolder,
+      )
+    ) {
+      setSubtestFolder(
+        VALID_SUBTESTS[nextDataset][0],
+      )
     }
   }
-
-  const preview = useDefectPreview(
-    previewDataset,
-    previewType,
-    previewType === "test"
-      ? { subtestFolder: previewSubtest }
-      : { networkType: previewNetwork },
-  )
 
   function handleStart() {
     const params: TestingParams = {
@@ -312,22 +265,88 @@ export function TestingPage() {
       subtest_folder: subtestFolder,
       stride,
       num_of_steps: toNumber(numOfSteps),
-      threshold_init: thresholdInitValue,
-      threshold_end: thresholdEndValue,
-      vis_results: toBoolean(visResults),
-      vis_reconstruction: toBoolean(visReconstruction),
+      threshold_init: toNumber(thresholdInit),
+      threshold_end: toNumber(thresholdEnd),
+      vis_results: toOptionalBoolean(visResults),
+      vis_reconstruction:
+        toOptionalBoolean(visReconstruction),
       vis_interval: toNumber(visInterval),
     }
 
-    setSubmitted({
-      datasetType,
-      networkType: selectedNetwork,
-      subtestFolder,
-      visResults: toBoolean(visResults) ?? false,
-    })
-
-    void run.start(params)
+    void task.start(params)
   }
+
+  const activeParams =
+    task.state === "idle"
+      ? null
+      : task.submittedParams
+
+  const previewDatasetType =
+    activeParams?.dataset_type ?? datasetType
+
+  const previewAeType =
+    activeParams?.ae_type ?? aeType
+
+  const previewModelSize =
+    activeParams?.model_size ?? modelSize
+
+  const previewNetworkType = resolveNetworkType(
+    previewAeType,
+    previewModelSize,
+  )
+
+  const previewSubtestFolder =
+    activeParams?.subtest_folder ?? subtestFolder
+
+  const previewType = resolvePreviewType(
+    task.state,
+    task.result,
+    task.submittedParams,
+  )
+
+  const preview = useDefectPreview(
+    previewDatasetType,
+    previewType,
+    previewType === "test"
+      ? {
+          subtestFolder: previewSubtestFolder,
+          limit: 5,
+        }
+      : {
+          networkType:
+            task.result?.network_type ??
+            previewNetworkType,
+          limit: 5,
+        },
+  )
+
+  const previewTitle = `Preview: ${previewType}`
+  const badge = RUN_BADGE[task.state]
+
+  const submittedNetworkType = task.submittedParams
+    ? resolveNetworkType(
+        task.submittedParams.ae_type ?? "plain",
+        task.submittedParams.model_size ?? "base",
+      )
+    : selectedNetworkType
+
+  const metricsResult = isMetricsResult(task.result)
+    ? task.result
+    : null
+
+  const reconstructedImages =
+    task.result &&
+    "reconstructed_images" in task.result
+      ? task.result.reconstructed_images
+      : undefined
+
+  const statusOutput = task.taskId
+    ? {
+        task_id: task.taskId,
+        status: task.taskState,
+        info: task.result ?? task.error,
+      }
+    : null
 
   return (
     <div className={styles.page}>
@@ -336,21 +355,28 @@ export function TestingPage() {
       <header className={styles.intro}>
         <h1 className={styles.title}>Testing</h1>
         <p className={styles.subtitle}>
-          Evaluates a trained autoencoder and visualizes detected defects.
+          Evaluates a trained model and creates anomaly metrics or
+          reconstruction outputs. Image size, crop size and grayscale
+          are inherited from the selected trained model.
         </p>
       </header>
 
       <div className={styles.columns}>
-        <Panel title="Parameters" className={styles.params}>
+        <Panel
+          title="Parameters"
+          className={styles.params}
+        >
           <div className={styles.fields}>
             <ParamField
-              label="Dataset"
-              tooltip="The dataset whose test images and trained weights will be used."
+              label="dataset_type"
+              tooltip="Dataset to evaluate. Allowed values: texture_1, texture_2, cpu."
             >
               <select
                 value={datasetType}
                 onChange={(event) =>
-                  setDatasetType(event.target.value as DatasetType)
+                  handleDatasetChange(
+                    event.target.value as DatasetType,
+                  )
                 }
               >
                 {DATASET_TYPES.map((value) => (
@@ -362,44 +388,48 @@ export function TestingPage() {
             </ParamField>
 
             <ParamField
-              label="Autoencoder type"
-              tooltip="Must match the type of the trained model."
+              label="ae_type"
+              tooltip="plain selects AE/AEE. denoising selects DAE/DAEE."
             >
               <select
                 value={aeType}
                 onChange={(event) =>
-                  setAeType(event.target.value as AEType)
+                  setAeType(
+                    event.target.value as AEType,
+                  )
                 }
               >
                 {AE_TYPES.map((value) => (
                   <option key={value} value={value}>
-                    {optionLabel(value)}
+                    {value}
                   </option>
                 ))}
               </select>
             </ParamField>
 
             <ParamField
-              label="Model size"
-              tooltip="Must match the architecture of the trained model."
+              label="model_size"
+              tooltip="base selects the standard model. extended selects the deeper model."
             >
               <select
                 value={modelSize}
                 onChange={(event) =>
-                  setModelSize(event.target.value as ModelSize)
+                  setModelSize(
+                    event.target.value as ModelSize,
+                  )
                 }
               >
                 {MODEL_SIZES.map((value) => (
                   <option key={value} value={value}>
-                    {optionLabel(value)}
+                    {value}
                   </option>
                 ))}
               </select>
             </ParamField>
 
             <ParamField
-              label="Test subset"
-              tooltip="Texture datasets use defective. CPU uses added, contamination, or missing."
+              label="subtest_folder"
+              tooltip="texture datasets use defective. cpu uses added, contamination or missing."
             >
               <select
                 value={subtestFolder}
@@ -409,22 +439,28 @@ export function TestingPage() {
                   )
                 }
               >
-                {VALID_SUBTESTS[datasetType].map((value) => (
-                  <option key={value} value={value}>
-                    {optionLabel(value)}
-                  </option>
-                ))}
+                {VALID_SUBTESTS[datasetType].map(
+                  (value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ),
+                )}
               </select>
             </ParamField>
 
             <ParamField
-              label="Stride"
-              tooltip="Sliding-window stride. Smaller values create more overlapping patches and take longer."
+              label="stride"
+              tooltip="Sliding-window stride. Allowed values: 4, 8, 16, 32, 64. Smaller values create more overlapping patches."
             >
               <select
                 value={stride}
                 onChange={(event) =>
-                  setStride(Number(event.target.value) as Stride)
+                  setStride(
+                    Number(
+                      event.target.value,
+                    ) as Stride,
+                  )
                 }
               >
                 {STRIDES.map((value) => (
@@ -434,178 +470,251 @@ export function TestingPage() {
                 ))}
               </select>
             </ParamField>
+
+            <h3>Optional overrides</h3>
+            <p>
+              Empty fields use the values from
+              testing_config.json.
+            </p>
+
+            <ParamField
+              label="num_of_steps"
+              hint="Server default when empty."
+              tooltip="Number of thresholds evaluated between threshold_init and threshold_end. Minimum: 1."
+            >
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={numOfSteps}
+                onChange={(event) =>
+                  setNumOfSteps(event.target.value)
+                }
+              />
+            </ParamField>
+
+            <ParamField
+              label="threshold_init"
+              hint="Server default when empty."
+              tooltip="Start of the SSIM residual threshold range. Minimum: 0. Must be smaller than threshold_end."
+            >
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={thresholdInit}
+                onChange={(event) =>
+                  setThresholdInit(event.target.value)
+                }
+              />
+            </ParamField>
+
+            <ParamField
+              label="threshold_end"
+              hint="Server default when empty."
+              tooltip="End of the SSIM residual threshold range. Maximum: 2. Must be greater than threshold_init."
+            >
+              <input
+                type="number"
+                max={LIMITS.thresholdEndMax}
+                step="any"
+                value={thresholdEnd}
+                onChange={(event) =>
+                  setThresholdEnd(event.target.value)
+                }
+              />
+            </ParamField>
+
+            <ParamField
+              label="vis_results"
+              tooltip="true saves per-image anomaly-mask visualizations. false does not save them."
+            >
+              <select
+                value={visResults}
+                onChange={(event) =>
+                  setVisResults(
+                    event.target.value as OptionalBoolean,
+                  )
+                }
+              >
+                <option value="">Server default</option>
+                <option value="true">true</option>
+                <option value="false">false</option>
+              </select>
+            </ParamField>
+
+            <ParamField
+              label="vis_reconstruction"
+              tooltip="true runs reconstruction-only mode without ROC, SSIM or MSE metrics. It cannot be true together with vis_results."
+            >
+              <select
+                value={visReconstruction}
+                onChange={(event) =>
+                  setVisReconstruction(
+                    event.target.value as OptionalBoolean,
+                  )
+                }
+              >
+                <option value="">Server default</option>
+                <option value="true">true</option>
+                <option value="false">false</option>
+              </select>
+            </ParamField>
+
+            <ParamField
+              label="vis_interval"
+              hint="Server default when empty."
+              tooltip={`Saves a visualization at every Nth threshold. Minimum: 1. Maximum: ${LIMITS.testVisIntervalMax}.`}
+            >
+              <input
+                type="number"
+                min={1}
+                max={LIMITS.testVisIntervalMax}
+                step={1}
+                value={visInterval}
+                onChange={(event) =>
+                  setVisInterval(event.target.value)
+                }
+              />
+            </ParamField>
           </div>
 
-          <p className={styles.inherited}>
-            Image size, crop size, grayscale mode, and latent dimension are
-            inherited from the selected trained model.
-          </p>
-
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Optional overrides</h2>
-            <p className={styles.sectionDescription}>
-              Empty fields use the server defaults.
-            </p>
-
-            <div className={styles.fieldGrid}>
-              <ParamField
-                label="Threshold steps"
-                tooltip="Number of thresholds evaluated between start and end. Minimum: 1."
-              >
-                <input
-                  type="number"
-                  min={1}
-                  placeholder="Server default"
-                  value={numOfSteps}
-                  onChange={(event) =>
-                    setNumOfSteps(event.target.value)
-                  }
-                />
-              </ParamField>
-
-              <ParamField
-                label="Threshold start"
-                tooltip="Beginning of the SSIM threshold range. Minimum: 0."
-              >
-                <input
-                  type="number"
-                  min={0}
-                  step="any"
-                  placeholder="Server default"
-                  value={thresholdInit}
-                  onChange={(event) =>
-                    setThresholdInit(event.target.value)
-                  }
-                />
-              </ParamField>
-
-              <ParamField
-                label="Threshold end"
-                tooltip={`End of the SSIM threshold range. Maximum: ${LIMITS.thresholdEndMax}.`}
-              >
-                <input
-                  type="number"
-                  max={LIMITS.thresholdEndMax}
-                  step="any"
-                  placeholder="Server default"
-                  value={thresholdEnd}
-                  onChange={(event) =>
-                    setThresholdEnd(event.target.value)
-                  }
-                />
-              </ParamField>
-
-              <ParamField
-                label="Result visualizations"
-                tooltip="Saves per-image defect masks and visualizations during metric evaluation."
-              >
-                <select
-                  value={visResults}
-                  onChange={(event) =>
-                    setVisResults(
-                      event.target.value as OptionalBoolean,
-                    )
-                  }
-                >
-                  <option value="">Server default</option>
-                  <option value="true">Enabled</option>
-                  <option value="false">Disabled</option>
-                </select>
-              </ParamField>
-
-              <ParamField
-                label="Reconstruction-only mode"
-                tooltip="Saves reconstructed images without calculating ROC, SSIM, or MSE metrics."
-              >
-                <select
-                  value={visReconstruction}
-                  onChange={(event) =>
-                    setVisReconstruction(
-                      event.target.value as OptionalBoolean,
-                    )
-                  }
-                >
-                  <option value="">Server default</option>
-                  <option value="true">Enabled</option>
-                  <option value="false">Disabled</option>
-                </select>
-              </ParamField>
-
-              <ParamField
-                label="Visualization interval"
-                tooltip={`Save a visualization at every Nth threshold. Allowed range: 1-${LIMITS.testVisIntervalMax}.`}
-              >
-                <input
-                  type="number"
-                  min={1}
-                  max={LIMITS.testVisIntervalMax}
-                  placeholder="Server default"
-                  value={visInterval}
-                  onChange={(event) =>
-                    setVisInterval(event.target.value)
-                  }
-                />
-              </ParamField>
-            </div>
-          </section>
-
           {readiness.loading ? (
-            <p className={styles.readiness}>
-              Checking trained models...
-            </p>
+            <p>Checking trained models...</p>
           ) : null}
 
           {readiness.error ? (
-            <p className={styles.error}>{readiness.error}</p>
+            <p className={styles.error}>
+              Readiness check failed: {readiness.error}
+            </p>
           ) : null}
 
-          {configurationError ? (
-            <p className={styles.error}>{configurationError}</p>
+          {!readiness.loading &&
+          readiness.data &&
+          !modelReady ? (
+            <p className={styles.error}>
+              No trained {selectedNetworkType} model is
+              available for {datasetType}.{" "}
+              <Link to="/training">Open training</Link>
+            </p>
           ) : null}
 
-          {prerequisiteMessage ? (
-            <div className={styles.prerequisite} role="alert">
-              <p className={styles.prerequisiteText}>
-                {prerequisiteMessage}
-              </p>
+          {visualizationConflict ? (
+            <p className={styles.error}>
+              vis_results and vis_reconstruction cannot
+              both be true.
+            </p>
+          ) : null}
 
-              <Button
-                icon={ArrowRight}
-                iconPosition="right"
-                onClick={() => navigate("/training")}
-              >
-                Go to training
-              </Button>
-            </div>
+          {thresholdOrderInvalid ? (
+            <p className={styles.error}>
+              threshold_init must be smaller than
+              threshold_end.
+            </p>
           ) : null}
 
           <RunControls
             className={styles.controls}
-            running={run.state === "running"}
-            stopping={run.stopping}
-            disabled={startDisabled}
+            running={task.state === "running"}
+            stopping={task.stopping}
             onStart={handleStart}
-            onStop={() => void run.stop()}
-            startLabel="Start testing"
+            onStop={() => void task.stop()}
+            startLabel={`Start testing (${selectedNetworkType})`}
+            disabled={startDisabled}
           />
         </Panel>
 
         <div className={styles.results}>
           <Panel title="Status">
-            <StatusGrid items={statusItems} />
+            <StatusGrid
+              items={[
+                {
+                  label: "state",
+                  value: (
+                    <Badge variant={badge.variant}>
+                      {badge.label}
+                    </Badge>
+                  ),
+                },
+                {
+                  label: "elapsed",
+                  value: formatElapsedTime(
+                    task.elapsedMs,
+                  ),
+                },
+                {
+                  label: "task_status",
+                  value: task.taskState,
+                },
+                {
+                  label: "network_type",
+                  value:
+                    task.result?.network_type ??
+                    submittedNetworkType,
+                },
+                {
+                  label: "subtest_folder",
+                  value:
+                    metricsResult?.subtest_folder ??
+                    task.submittedParams?.subtest_folder ??
+                    subtestFolder,
+                },
+                ...(metricsResult
+                  ? [
+                      {
+                        label: "auc_roc",
+                        value:
+                          metricsResult.auc_roc.toFixed(6),
+                      },
+                      {
+                        label: "avg_ssim",
+                        value:
+                          metricsResult.avg_ssim.toFixed(6),
+                      },
+                      {
+                        label: "mse_avg",
+                        value:
+                          metricsResult.mse_avg.toFixed(6),
+                      },
+                    ]
+                  : []),
+                ...(reconstructedImages !== undefined
+                  ? [
+                      {
+                        label: "reconstructed_images",
+                        value: reconstructedImages,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
 
-            {run.error ? (
-              <p className={styles.error}>{run.error}</p>
+            {task.taskId ? (
+              <p title={task.taskId}>
+                task_id: <code>{task.taskId}</code>
+              </p>
+            ) : null}
+
+            {task.error ? (
+              <p className={styles.error}>
+                {task.error}
+              </p>
             ) : null}
           </Panel>
 
-          <JsonPanel value={output} />
+          <JsonPanel value={statusOutput} />
 
           <PreviewGrid
+            className={
+              previewType === "roc_plot"
+                ? styles.rocPreview
+                : undefined
+            }
             title={previewTitle}
             images={preview.images}
             loading={preview.loading}
             error={preview.error}
+            emptyMessage={`No ${previewType} images are available for this selection.`}
           />
         </div>
       </div>
