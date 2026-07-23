@@ -71,6 +71,11 @@ export function DrawRectanglesPage() {
 
   const badge = RUN_BADGE[run.state]
 
+  const previewTitle =
+    run.state === "done" || run.state === "stopped"
+      ? "Current covered images"
+      : "Previous covered images"
+
   return (
     <div className={styles.page}>
       <Breadcrumb step="draw-rectangles" />
@@ -134,6 +139,7 @@ export function DrawRectanglesPage() {
                 type="number"
                 min={LIMITS.sizeOfCoverMin}
                 max={LIMITS.sizeOfCoverMax}
+                placeholder="e.g. 20"
                 value={sizeOfCover}
                 onChange={(event) => setSizeOfCover(event.target.value)}
               />
@@ -168,6 +174,20 @@ export function DrawRectanglesPage() {
                   value: formatElapsedTime(run.elapsedMs),
                 },
                 {
+                  label: "Source",
+                  value: result ? (
+                    <span className={styles.pathValue}>{`${datasetType}/${result.source}`}</span>
+                  ) : undefined,
+                  title: result?.source_dir,
+                },
+                {
+                  label: "Target",
+                  value: result ? (
+                    <span className={styles.pathValue}>{`${datasetType}/noise`}</span>
+                  ) : undefined,
+                  title: result?.target_dir,
+                },
+                {
                   label: "Source used",
                   value: result?.source,
                 },
@@ -184,7 +204,7 @@ export function DrawRectanglesPage() {
           <JsonPanel value={result} />
 
           <PreviewGrid
-            title="Covered images"
+            title={previewTitle}
             images={preview.images}
             loading={preview.loading}
             error={preview.error}

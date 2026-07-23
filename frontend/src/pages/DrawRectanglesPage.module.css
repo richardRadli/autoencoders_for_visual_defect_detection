@@ -60,6 +60,12 @@
   font-size: var(--text-sm);
 }
 
+.pathValue {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
 @media (max-width: 1024px) {
   .columns {
     grid-template-columns: minmax(0, 1fr);
