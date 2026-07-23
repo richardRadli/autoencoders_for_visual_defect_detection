@@ -2,11 +2,9 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Leverages caching strategies for node modules allocations
-COPY package*.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Copy all files from the frontend sub-tree
 COPY . .
 
 EXPOSE 5173
