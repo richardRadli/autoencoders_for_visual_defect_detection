@@ -13,6 +13,8 @@ services:
       - DATASET_ROOT=/app/dataset
       - STORAGE_ROOT=/app/storage
       - TZ=Europe/Budapest
+    networks:
+      - defect-detection-network
 
   defect_detection:
     build:
@@ -40,11 +42,15 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    networks:
+      - defect-detection-network
 
   redis_broker:
     image: redis:7-alpine
     container_name: defect_detection_redis
     restart: unless-stopped
+    networks:
+      - defect-detection-network
 
   defect_detection_worker:
     build:
@@ -71,6 +77,9 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    networks:
+      - defect-detection-network
+
   frontend:
     build:
       context: ./frontend
@@ -93,3 +102,9 @@ services:
     depends_on:
       - data_operations
       - defect_detection
+    networks:
+      - defect-detection-network
+
+networks:
+  defect-detection-network:
+    driver: bridge
