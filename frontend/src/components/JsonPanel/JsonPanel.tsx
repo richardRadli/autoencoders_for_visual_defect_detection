@@ -1,4 +1,4 @@
-import { Check, Copy } from "lucide-react"
+import { Check, Copy, Eye, EyeOff } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
 
@@ -60,6 +60,7 @@ export function JsonPanel({
   className,
 }: JsonPanelProps) {
   const [copied, setCopied] = useState(false)
+  const [hidden, setHidden] = useState(true)
   const timer = useRef<number | undefined>(undefined)
 
   useEffect(() => {
@@ -69,6 +70,18 @@ export function JsonPanel({
       }
     }
   }, [])
+
+  if (hidden) {
+    return (
+      <Button
+        icon={Eye}
+        className={className}
+        onClick={() => setHidden(false)}
+      >
+        Show JSON
+      </Button>
+    )
+  }
 
   if (value === null || value === undefined) {
     return (
@@ -95,9 +108,14 @@ export function JsonPanel({
       title={title}
       className={className}
       actions={
-        <Button icon={copied ? Check : Copy} onClick={handleCopy}>
-          {copied ? "Copied" : "Copy JSON"}
-        </Button>
+        <>
+          <Button icon={EyeOff} onClick={() => setHidden(true)}>
+            Hide
+          </Button>
+          <Button icon={copied ? Check : Copy} onClick={handleCopy}>
+            {copied ? "Copied" : "Copy JSON"}
+          </Button>
+        </>
       }
     >
       <pre className={styles.code}>{highlight(json)}</pre>

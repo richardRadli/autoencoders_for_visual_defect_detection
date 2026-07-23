@@ -12,3 +12,8 @@ export function formatElapsedTime(milliseconds: number): string {
     .map((value) => String(value).padStart(2, "0"))
     .join(":")
 }
+
+export function shortenPath(path: string, segments = 2): string {
+  const parts = path.split(/[\\/]/).filter(Boolean)
+  return parts.slice(-segments).join("/")
+}

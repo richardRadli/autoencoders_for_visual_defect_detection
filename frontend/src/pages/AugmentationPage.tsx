@@ -78,6 +78,11 @@ export function AugmentationPage() {
 
   const badge = RUN_BADGE[run.state]
 
+  const previewTitle =
+    run.state === "done" || run.state === "stopped"
+      ? "Current augmented images"
+      : "Previous augmented images"
+
   return (
     <div className={styles.page}>
       <Breadcrumb step="augmentation" />
@@ -155,6 +160,7 @@ export function AugmentationPage() {
               <input
                 type="number"
                 min={0}
+                placeholder="e.g. 5000"
                 value={rotateCount}
                 onChange={(event) => setRotateCount(event.target.value)}
               />
@@ -168,6 +174,7 @@ export function AugmentationPage() {
               <input
                 type="number"
                 min={0}
+                placeholder="e.g. 5000"
                 value={horizontalFlipCount}
                 onChange={(event) =>
                   setHorizontalFlipCount(event.target.value)
@@ -183,6 +190,7 @@ export function AugmentationPage() {
               <input
                 type="number"
                 min={0}
+                placeholder="e.g. 2500"
                 value={verticalFlipCount}
                 onChange={(event) => setVerticalFlipCount(event.target.value)}
               />
@@ -218,6 +226,20 @@ export function AugmentationPage() {
                   value: formatElapsedTime(run.elapsedMs),
                 },
                 {
+                  label: "Source",
+                  value: result ? (
+                    <span className={styles.pathValue}>{`${datasetType}/good`}</span>
+                  ) : undefined,
+                  title: result?.source_dir,
+                },
+                {
+                  label: "Target",
+                  value: result ? (
+                    <span className={styles.pathValue}>{`${datasetType}/aug`}</span>
+                  ) : undefined,
+                  title: result?.target_dir,
+                },
+                {
                   label: "Source images",
                   value: result?.source_images,
                 },
@@ -242,7 +264,7 @@ export function AugmentationPage() {
           <JsonPanel value={result} />
 
           <PreviewGrid
-            title="Augmented images"
+            title={previewTitle}
             images={preview.images}
             loading={preview.loading}
             error={preview.error}
