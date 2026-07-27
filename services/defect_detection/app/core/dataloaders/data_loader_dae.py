@@ -21,7 +21,10 @@ class MVTecDatasetDenoising(Dataset):
             if filename.lower().endswith((".png", ".jpg", ".jpeg"))
         )
 
-        assert len(self.image_files) == len(self.noise_files), "Number of image files and noise files must be the same"
+        assert len(self.image_files) == len(self.noise_files), (
+            f"DAE/DAEE training requires one noise image for every augmented image.\n"
+            f"Current counts: augmented={len(self.image_files)}, noise={len(self.noise_files)}."
+        )
 
         self.num_channel = "L" if grayscale else "RGB"
 
