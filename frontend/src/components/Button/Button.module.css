@@ -70,12 +70,12 @@
 }
 
 .danger {
-  background: var(--surface);
-  border-color: var(--danger-border);
-  color: var(--danger);
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #ffffff;
 }
 
 .danger:not(:disabled):hover {
-  background: var(--danger-soft);
-  border-color: var(--danger);
+  box-shadow: var(--shadow-sm);
+  filter: brightness(0.94);
 }
