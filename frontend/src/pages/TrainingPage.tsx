@@ -263,6 +263,18 @@ export function TrainingPage() {
       }
     : null
 
+  const trainedDenoising = task.submittedParams
+    ? task.submittedParams.ae_type === "denoising"
+    : aeType === "denoising"
+
+  const sourceLabel = task.result
+    ? trainedDenoising
+      ? "aug + noise"
+      : "aug"
+    : undefined
+
+  const targetLabel = task.result ? "weights" : undefined
+
   return (
     <div className={styles.page}>
       <Breadcrumb step="training" />
@@ -638,6 +650,14 @@ export function TrainingPage() {
                   value:
                     task.result?.network_type ??
                     submittedNetworkType,
+                },
+                {
+                  label: "source",
+                  value: sourceLabel,
+                },
+                {
+                  label: "target",
+                  value: targetLabel,
                 },
                 {
                   label: "epochs_run",

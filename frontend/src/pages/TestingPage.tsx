@@ -340,6 +340,12 @@ export function TestingPage() {
       ? task.result.reconstructed_images
       : undefined
 
+  const outputLabel = task.result
+    ? reconstructedImages !== undefined
+      ? "reconstruction"
+      : "metrics"
+    : undefined
+
   const statusOutput = task.taskId
     ? {
         task_id: task.taskId,
@@ -486,6 +492,7 @@ export function TestingPage() {
                 type="number"
                 min={1}
                 step={1}
+                placeholder="e.g. 50"
                 value={numOfSteps}
                 onChange={(event) =>
                   setNumOfSteps(event.target.value)
@@ -502,6 +509,7 @@ export function TestingPage() {
                 type="number"
                 min={0}
                 step="any"
+                placeholder="e.g. 0.01"
                 value={thresholdInit}
                 onChange={(event) =>
                   setThresholdInit(event.target.value)
@@ -518,6 +526,7 @@ export function TestingPage() {
                 type="number"
                 max={LIMITS.thresholdEndMax}
                 step="any"
+                placeholder="e.g. 1.01"
                 value={thresholdEnd}
                 onChange={(event) =>
                   setThresholdEnd(event.target.value)
@@ -571,6 +580,7 @@ export function TestingPage() {
                 min={1}
                 max={LIMITS.testVisIntervalMax}
                 step={1}
+                placeholder="e.g. 10"
                 value={visInterval}
                 onChange={(event) =>
                   setVisInterval(event.target.value)
@@ -658,6 +668,10 @@ export function TestingPage() {
                     metricsResult?.subtest_folder ??
                     task.submittedParams?.subtest_folder ??
                     subtestFolder,
+                },
+                {
+                  label: "output",
+                  value: outputLabel,
                 },
                 ...(metricsResult
                   ? [
