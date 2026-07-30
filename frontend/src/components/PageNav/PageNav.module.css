@@ -21,22 +21,37 @@
   align-items: center;
   gap: var(--space-2);
   max-width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid transparent;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  color: var(--text-secondary);
+  background: var(--surface);
+  color: var(--text-primary);
   font-size: var(--text-base);
   font-weight: var(--weight-medium);
   transition:
     color var(--transition-fast),
     background-color var(--transition-fast),
-    border-color var(--transition-fast);
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .link:hover {
-  border-color: var(--border);
+  border-color: var(--accent-border);
   background-color: var(--surface-hover);
-  color: var(--text-primary);
+  color: var(--accent-text);
+  box-shadow: var(--shadow-sm);
+}
+
+.next {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.next:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: var(--accent-contrast);
 }
 
 .icon {

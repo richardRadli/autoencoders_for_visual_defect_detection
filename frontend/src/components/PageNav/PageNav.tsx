@@ -48,7 +48,7 @@ export function PageNav({ step, className }: PageNavProps) {
       <div className={`${styles.side} ${styles.sideEnd}`}>
         {next ? (
           <Link
-            className={styles.link}
+            className={`${styles.link} ${styles.next}`}
             to={next.path}
             aria-label={`Next step: ${next.label}`}
           >
