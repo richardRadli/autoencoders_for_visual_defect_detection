@@ -1,5 +1,6 @@
 import { Crosshair, Moon, Sun } from "lucide-react"
 import { useState } from "react"
+import { Link } from "react-router-dom"
 
 import { SERVICES } from "../../config/workflow"
 import { useFirstVisit } from "../../hooks/useFirstVisit"
@@ -37,10 +38,10 @@ export function Header() {
 
   return (
     <header className={styles.header}>
-      <div className={styles.brand}>
+      <Link to="/" className={styles.brand}>
         <Crosshair className={styles.logo} aria-hidden="true" />
         <span className={styles.title}>Defect detection framework</span>
-      </div>
+      </Link>
 
       <div className={styles.actions}>
         <div className={styles.services}>
