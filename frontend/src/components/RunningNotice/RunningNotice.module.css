@@ -1,0 +1,60 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.box {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  display: inline-flex;
+  padding: var(--space-2);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--text-primary);
+}
+
+.closeIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.text {
+  margin: 0 0 var(--space-2);
+  color: var(--text-primary);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.subtext {
+  margin: 0 0 var(--space-5);
+  color: var(--text-secondary);
+  font-size: var(--text-md);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}

@@ -36,6 +36,7 @@ import { Panel } from "../components/Panel/Panel"
 import { ParamField } from "../components/ParamField/ParamField"
 import { PreviewGrid } from "../components/PreviewGrid/PreviewGrid"
 import { RunControls } from "../components/RunControls/RunControls"
+import { RunningNotice } from "../components/RunningNotice/RunningNotice"
 import { StatusGrid } from "../components/StatusGrid/StatusGrid"
 import { useDefectPreview } from "../hooks/usePreview"
 import type { TaskRunState } from "../hooks/useTaskPolling"
@@ -356,6 +357,8 @@ export function TestingPage() {
 
   return (
     <div className={styles.page}>
+      <RunningNotice running={task.state === "running"} label="Testing" />
+
       <Breadcrumb step="testing" />
 
       <header className={styles.intro}>

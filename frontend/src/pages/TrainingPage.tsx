@@ -28,6 +28,7 @@ import { PageNav } from "../components/PageNav/PageNav"
 import { Panel } from "../components/Panel/Panel"
 import { ParamField } from "../components/ParamField/ParamField"
 import { RunControls } from "../components/RunControls/RunControls"
+import { RunningNotice } from "../components/RunningNotice/RunningNotice"
 import { StatusGrid } from "../components/StatusGrid/StatusGrid"
 import type { TaskRunState } from "../hooks/useTaskPolling"
 import { useTaskPolling } from "../hooks/useTaskPolling"
@@ -290,6 +291,8 @@ export function TrainingPage() {
 
   return (
     <div className={styles.page}>
+      <RunningNotice running={task.state === "running"} label="Training" />
+
       <Breadcrumb step="training" />
 
       <header className={styles.intro}>
