@@ -11,4 +11,4 @@ Pillow == 10.2.0
 scikit-image == 0.22.0
 scikit-learn == 1.4.2
 numpy==1.26.4
-torchvision == 0.17.0
+torchvision == 0.21.0

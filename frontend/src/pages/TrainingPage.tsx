@@ -202,8 +202,21 @@ export function TrainingPage() {
 
   const requiresNoise = aeType === "denoising"
 
+  const augImages = readiness.data?.aug.images
+  const noiseImages = readiness.data?.noise.images
+
+  const countsMismatch =
+    requiresNoise &&
+    augImages !== undefined &&
+    noiseImages !== undefined &&
+    augImages !== noiseImages
+
+  const showDenoiseCounts =
+    requiresNoise && readiness.data != null
+
   const prerequisitesReady =
-    augmentationReady && (!requiresNoise || noiseReady)
+    augmentationReady &&
+    (!requiresNoise || (noiseReady && !countsMismatch))
 
   const startDisabled =
     readiness.loading ||
@@ -614,6 +627,16 @@ export function TrainingPage() {
             </p>
           ) : null}
 
+          {!readiness.loading && countsMismatch ? (
+            <p className={styles.error}>
+              Augmented ({augImages}) and noise ({noiseImages}) image
+              counts must match for denoising.{" "}
+              <Link to="/draw-rectangles">
+                Open draw rectangles
+              </Link>
+            </p>
+          ) : null}
+
           <RunControls
             className={styles.controls}
             running={task.state === "running"}
@@ -651,6 +674,30 @@ export function TrainingPage() {
                     task.result?.network_type ??
                     submittedNetworkType,
                 },
+                ...(showDenoiseCounts
+                  ? [
+                      {
+                        label: "aug_images",
+                        value: countsMismatch ? (
+                          <span className={styles.mismatch}>
+                            {augImages}
+                          </span>
+                        ) : (
+                          augImages
+                        ),
+                      },
+                      {
+                        label: "noise_images",
+                        value: countsMismatch ? (
+                          <span className={styles.mismatch}>
+                            {noiseImages}
+                          </span>
+                        ) : (
+                          noiseImages
+                        ),
+                      },
+                    ]
+                  : []),
                 {
                   label: "source",
                   value: sourceLabel,
