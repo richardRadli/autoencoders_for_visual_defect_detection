@@ -33,11 +33,29 @@ class AugmentationService:
     """Generate base crops and count-based augmented images for one dataset."""
 
     _stop_event = threading.Event()
+    _running = False
+    _processed = 0
+    _total = 0
 
     @staticmethod
     def request_stop() -> None:
         """Signal the running augmentation to stop as soon as possible."""
         AugmentationService._stop_event.set()
+
+    @staticmethod
+    def progress() -> dict:
+        """
+        Report the current augmentation progress for polling.
+
+        Returns:
+            dict: The running flag with the processed and total source-image
+            counts of the active (or most recent) run.
+        """
+        return {
+            "running": AugmentationService._running,
+            "processed": AugmentationService._processed,
+            "total": AugmentationService._total,
+        }
 
     @staticmethod
     def _distribute(count: int, num_imgs: int) -> List[int]:
@@ -267,30 +285,38 @@ class AugmentationService:
 
         num_workers = resolve_num_workers(config.num_workers)
 
+        AugmentationService._total = num_imgs
+        AugmentationService._processed = 0
+        AugmentationService._running = True
+
         processed = 0
         stopped = False
-        with ProcessPoolExecutor(max_workers=num_workers) as executor:
-            futures = [
-                executor.submit(
-                    AugmentationService._process_image,
-                    image_path,
-                    rotate_per[i],
-                    hflip_per[i],
-                    vflip_per[i],
-                    str(target_dir),
-                    config,
-                )
-                for i, image_path in enumerate(image_paths)
-            ]
+        try:
+            with ProcessPoolExecutor(max_workers=num_workers) as executor:
+                futures = [
+                    executor.submit(
+                        AugmentationService._process_image,
+                        image_path,
+                        rotate_per[i],
+                        hflip_per[i],
+                        vflip_per[i],
+                        str(target_dir),
+                        config,
+                    )
+                    for i, image_path in enumerate(image_paths)
+                ]
 
-            for future in tqdm(futures, total=len(futures), desc="Augmenting images"):
-                if AugmentationService._stop_event.is_set():
-                    stopped = True
-                    for f in futures:
-                        f.cancel()
-                    break
-                future.result()
-                processed += 1
+                for future in tqdm(futures, total=len(futures), desc="Augmenting images"):
+                    if AugmentationService._stop_event.is_set():
+                        stopped = True
+                        for f in futures:
+                            f.cancel()
+                        break
+                    future.result()
+                    processed += 1
+                    AugmentationService._processed = processed
+        finally:
+            AugmentationService._running = False
 
         total_aug = config.rotate_count + config.horizontal_flip_count + config.vertical_flip_count
 

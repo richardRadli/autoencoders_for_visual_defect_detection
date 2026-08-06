@@ -92,6 +92,18 @@ async def run_draw_rectangles(
     }
 
 
+@draw_rectangles_router.get("/progress")
+async def get_draw_rectangles_progress():
+    """
+    Report the current draw-rectangles processing progress for polling.
+
+    Returns:
+        dict: The running flag with the processed and total source-image counts
+        of the active (or most recent) run.
+    """
+    return await run_in_threadpool(DrawRectanglesService.progress)
+
+
 @draw_rectangles_router.post("/stop")
 async def stop_draw_rectangles():
     """

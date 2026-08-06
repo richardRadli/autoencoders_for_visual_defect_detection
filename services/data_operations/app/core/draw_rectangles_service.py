@@ -31,11 +31,29 @@ class DrawRectanglesService:
     """Draw a dominant-color square on the source images of one dataset."""
 
     _stop_event = threading.Event()
+    _running = False
+    _processed = 0
+    _total = 0
 
     @staticmethod
     def request_stop() -> None:
         """Signal the running draw-rectangles job to stop as soon as possible."""
         DrawRectanglesService._stop_event.set()
+
+    @staticmethod
+    def progress() -> dict:
+        """
+        Report the current draw-rectangles progress for polling.
+
+        Returns:
+            dict: The running flag with the processed and total source-image
+            counts of the active (or most recent) run.
+        """
+        return {
+            "running": DrawRectanglesService._running,
+            "processed": DrawRectanglesService._processed,
+            "total": DrawRectanglesService._total,
+        }
 
     @staticmethod
     def resolve_source_dir(dataset_type: str, source: str) -> Path:
@@ -136,27 +154,35 @@ class DrawRectanglesService:
         image_paths = file_reader(str(source_dir), "png", "jpg")
         num_workers = resolve_num_workers(config.num_workers)
 
+        DrawRectanglesService._total = len(image_paths)
+        DrawRectanglesService._processed = 0
+        DrawRectanglesService._running = True
+
         processed = 0
         stopped = False
-        with ProcessPoolExecutor(max_workers=num_workers) as executor:
-            futures = [
-                executor.submit(
-                    DrawRectanglesService._process_image,
-                    image_path,
-                    str(target_dir),
-                    config.size_of_cover,
-                )
-                for image_path in image_paths
-            ]
+        try:
+            with ProcessPoolExecutor(max_workers=num_workers) as executor:
+                futures = [
+                    executor.submit(
+                        DrawRectanglesService._process_image,
+                        image_path,
+                        str(target_dir),
+                        config.size_of_cover,
+                    )
+                    for image_path in image_paths
+                ]
 
-            for future in tqdm(futures, desc="Processing images", total=len(futures)):
-                if DrawRectanglesService._stop_event.is_set():
-                    stopped = True
-                    for f in futures:
-                        f.cancel()
-                    break
-                future.result()
-                processed += 1
+                for future in tqdm(futures, desc="Processing images", total=len(futures)):
+                    if DrawRectanglesService._stop_event.is_set():
+                        stopped = True
+                        for f in futures:
+                            f.cancel()
+                        break
+                    future.result()
+                    processed += 1
+                    DrawRectanglesService._processed = processed
+        finally:
+            DrawRectanglesService._running = False
 
         run_log = {
             "params": request_params,

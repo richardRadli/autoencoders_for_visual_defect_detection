@@ -130,6 +130,18 @@ async def run_augmentation(
     return response
 
 
+@augmentation_router.get("/progress")
+async def get_augmentation_progress():
+    """
+    Report the current augmentation processing progress for polling.
+
+    Returns:
+        dict: The running flag with the processed and total source-image counts
+        of the active (or most recent) run.
+    """
+    return await run_in_threadpool(AugmentationService.progress)
+
+
 @augmentation_router.post("/stop")
 async def stop_augmentation():
     """
