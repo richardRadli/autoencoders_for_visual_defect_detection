@@ -8,6 +8,7 @@ import torch.optim as optim
 from tqdm import tqdm
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader, random_split
+from torch.utils.tensorboard import SummaryWriter
 from pytorch_msssim import SSIM
 from typing import Tuple
 
@@ -81,6 +82,16 @@ class TrainAutoEncoder:
             optimizer=self.optimizer,
             step_size=self.train_cfg.get("step_size"),
             gamma=self.train_cfg.get("gamma"),
+        )
+
+        tensorboard_log_dir = create_save_dirs(
+            directory_path=str(training_testing_paths(self.dataset_type)["model_logs"]),
+            network_type=self.network_type,
+            timestamp=self.timestamp,
+        )
+
+        self.writer = SummaryWriter(
+            log_dir=str(tensorboard_log_dir)
         )
 
         self.save_path = create_save_dirs(
@@ -270,6 +281,16 @@ class TrainAutoEncoder:
 
             train_loss = np.average(train_losses)
             valid_loss = np.average(valid_losses)
+
+            self.writer.add_scalars(
+                "Loss",
+                {
+                    "Train": train_loss,
+                    "Valid": valid_loss,
+                },
+                epoch,
+            )
+
             logging.info(f"Train Loss: {train_loss:.5f} valid Loss: {valid_loss:.5f}")
 
             train_losses.clear()
@@ -294,6 +315,10 @@ class TrainAutoEncoder:
                 if early_stopping_counter >= self.train_cfg.get("early_stopping"):
                     logging.info(f"Early stopping at epoch {epoch}")
                     break
+
+        self.writer.close()
+        self.writer.flush()
+
         return {
             "status": "DONE",
             "network_type": self.network_type,
