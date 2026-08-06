@@ -121,6 +121,44 @@ async def get_readiness(
     return await run_in_threadpool(DatasetService.get_readiness, dataset_type.value)
 
 
+@defect_dataset_router.get("/weights")
+async def get_weights(
+    dataset_type: DatasetType = Query(..., description="Dataset the weights belong to"),
+    network_type: NetworkType = Query(
+        ...,
+        description="Network type (AE / AEE / DAE / DAEE) whose trained runs are listed",
+    ),
+):
+    """
+    List the usable trained-weight runs for a dataset and network type.
+
+    Each run is a timestamp folder holding a loadable .pt and a params.json with
+    the fields testing needs; runs left over from an interrupted training are
+    included. The newest run is first, so the frontend can mark it as the
+    default. The returned 'run' value is exactly what /test/run accepts as its
+    optional weights_run.
+
+    Args:
+        dataset_type: Dataset the weights belong to.
+        network_type: Network type whose trained runs are listed.
+
+    Returns:
+        dict: The echoed selectors and the usable {run, weights_file} entries,
+        newest first (empty when none exist).
+    """
+    weights = await run_in_threadpool(
+        DatasetService.list_weights,
+        dataset_type.value,
+        network_type.value,
+    )
+
+    return {
+        "dataset_type": dataset_type.value,
+        "network_type": network_type.value,
+        "weights": weights,
+    }
+
+
 @defect_dataset_router.get("/preview")
 async def get_preview(
     dataset_type: DatasetType = Query(..., description="Dataset to preview"),

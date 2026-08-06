@@ -70,6 +70,10 @@ async def run_testing(
     model_size: ModelSize = Query(ModelSize.base, description="base = standard, extended = deeper network"),
     subtest_folder: SubtestFolder = Query(SubtestFolder.defective, description="texture → defective; cpu → added/contamination/missing"),
     stride: Stride = Query(Stride.s_32, description="Sliding-window stride (4/8/16/32/64)"),
+    weights_run: str | None = Query(
+        None,
+        description="Timestamp of a specific trained run to test (from GET /dataset/weights). Empty = use the latest run.",
+    ),
     num_of_steps: int | None = Query(None, ge=1, description="Number of threshold steps, whole number — empty = json default"),
     threshold_init: float | None = Query(None, ge=0, description="Threshold range start, decimal ≥ 0 — empty = json default"),
     threshold_end: float | None = Query(None, le=2, description="Threshold range end, decimal ≤ 2 — empty = json default"),
@@ -92,6 +96,7 @@ async def run_testing(
         model_size: Base or extended architecture.
         subtest_folder: Which test subset to use (validated against the dataset).
         stride: Sliding-window stride (dropdown).
+        weights_run: Optional specific trained run to test; empty uses the latest.
         num_of_steps: Optional override for the number of threshold steps.
         threshold_init: Optional override for the threshold range start.
         threshold_end: Optional override for the threshold range end.
@@ -138,6 +143,7 @@ async def run_testing(
         "dataset_type": dataset_type.value,
         "subtest_folder": subtest_folder.value,
         "stride": strd,
+        "weights_run": weights_run,
         "num_of_steps": config.num_of_steps if num_of_steps is None else num_of_steps,
         "threshold_init": resolved_init,
         "threshold_end": resolved_end,

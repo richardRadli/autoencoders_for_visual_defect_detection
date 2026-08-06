@@ -44,6 +44,7 @@ class TestAutoEncoder:
         self.subtest_folder = self.test_cfg.get("subtest_folder")
 
         self.stride = self.test_cfg.get("stride")
+        self.weights_run = self.test_cfg.get("weights_run")
 
         if self.network_type not in ["AE", "AEE", "DAE", "DAEE"]:
             raise ValueError(f"wrong network type: {self.network_type}")
@@ -55,10 +56,7 @@ class TestAutoEncoder:
         )
         if not os.path.isdir(weights_root):
             raise ValueError(f"No trained weights found for {self.network_type} / {self.dataset_type}")
-        try:
-            self.weights_path = find_latest_file_in_latest_directory(path=weights_root, extension=".pt")
-        except ValueError:
-            raise ValueError(f"No trained weights found for {self.network_type} / {self.dataset_type}")
+        self.weights_path = self._select_weights_path(weights_root)
 
         train_params = self.load_train_params(os.path.dirname(self.weights_path))
         self.grayscale = train_params["grayscale"]
@@ -128,6 +126,52 @@ class TestAutoEncoder:
                 network_type=self.network_type,
                 timestamp=self.timestamp,
             )
+
+    def _select_weights_path(self, weights_root: str) -> str:
+        """
+        Resolve the weight file to load for this evaluation run.
+
+        Without a selected run the latest run's weight is used (unchanged
+        default behavior). With a selected weights_run, only a direct timestamp
+        subfolder of this dataset+network weights root is accepted (guarding
+        against path traversal), and its highest-epoch .pt is loaded.
+
+        Args:
+            weights_root: The dataset+network model_weights directory.
+
+        Returns:
+            str: Absolute path to the selected weight file.
+
+        Raises:
+            ValueError: If no weights exist, or the selected run is unknown or
+                unsafe, or it holds no weight file.
+        """
+        if not self.weights_run:
+            try:
+                return find_latest_file_in_latest_directory(path=weights_root, extension=".pt")
+            except ValueError:
+                raise ValueError(
+                    f"No trained weights found for {self.network_type} / {self.dataset_type}"
+                )
+
+        root_resolved = os.path.realpath(weights_root)
+        run_dir = os.path.realpath(os.path.join(root_resolved, self.weights_run))
+
+        if os.path.dirname(run_dir) != root_resolved or not os.path.isdir(run_dir):
+            raise ValueError(
+                f"Unknown weights_run '{self.weights_run}' for "
+                f"{self.network_type} / {self.dataset_type}"
+            )
+
+        weight_files = file_reader(run_dir, "pt")
+        if not weight_files:
+            raise ValueError(
+                f"No weight file in weights_run '{self.weights_run}' for "
+                f"{self.network_type} / {self.dataset_type}"
+            )
+
+        # file_reader sorts numerically, so the last file is the highest epoch.
+        return weight_files[-1]
 
     @staticmethod
     def load_train_params(weights_dir: str) -> dict:

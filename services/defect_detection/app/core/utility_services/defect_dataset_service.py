@@ -123,6 +123,78 @@ class DatasetService:
         )
 
     @staticmethod
+    def list_weights(dataset_type: str, network_type: str) -> list[dict]:
+        """
+        List the usable trained-weight runs for a dataset and network type.
+
+        Every timestamped run folder under the network's weights root is
+        validated on its own; the readiness check (_has_weights) only inspects
+        the latest run, so it is deliberately not reused here. A run is usable
+        when it holds a loadable weight file and a params.json carrying the
+        fields testing needs, so weights left over from an interrupted training
+        are listed too.
+
+        Args:
+            dataset_type: Selected dataset name.
+            network_type: Network type whose runs are listed.
+
+        Returns:
+            list[dict]: One {"run", "weights_file"} entry per usable run, newest
+            first. 'run' is the timestamp folder name (the value the frontend
+            sends back as weights_run); 'weights_file' is the selected weight
+            file name. Empty when no usable run exists.
+        """
+        weights_root = (
+            training_testing_paths(dataset_type)["model_weights"]
+            / network_type
+        )
+
+        usable_runs = []
+        for run_dir in reversed(list_subdirectories(weights_root)):
+            weight_files = file_reader(str(run_dir), "pt")
+            if not weight_files:
+                continue
+
+            params = read_json_safely(run_dir / "params.json")
+            if not isinstance(params, dict):
+                continue
+
+            grayscale = params.get("grayscale")
+            latent_space_dimension = params.get("latent_space_dimension")
+            img_size = params.get("img_size")
+            crop_size = params.get("crop_size")
+
+            if not isinstance(grayscale, bool):
+                continue
+            if (
+                isinstance(latent_space_dimension, bool)
+                or not isinstance(latent_space_dimension, int)
+                or latent_space_dimension < 1
+            ):
+                continue
+            if (
+                isinstance(img_size, bool)
+                or not isinstance(img_size, int)
+                or img_size < 1
+            ):
+                continue
+            if (
+                isinstance(crop_size, bool)
+                or not isinstance(crop_size, int)
+                or crop_size < 1
+            ):
+                continue
+
+            # A normal run keeps a single best weight; if several exist (legacy),
+            # file_reader sorts numerically, so the last is the highest epoch.
+            weights_file = Path(weight_files[-1]).name
+            usable_runs.append(
+                {"run": run_dir.name, "weights_file": weights_file}
+            )
+
+        return usable_runs
+
+    @staticmethod
     def _resolve(
         dataset_type: str,
         preview_type: str,
