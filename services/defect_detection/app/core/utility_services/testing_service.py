@@ -39,6 +39,10 @@ class TestAutoEncoder:
 
         self.test_cfg = config
 
+        self._progress_callback = None
+        self._progress_current = 0
+        self._progress_total = 0
+
         self.network_type = self.test_cfg.get("network_type")
         self.dataset_type = self.test_cfg.get("dataset_type")
         self.subtest_folder = self.test_cfg.get("subtest_folder")
@@ -172,6 +176,22 @@ class TestAutoEncoder:
 
         # file_reader sorts numerically, so the last file is the highest epoch.
         return weight_files[-1]
+
+    def _advance_progress(self, phase: str, step: int = 1) -> None:
+        """
+        Advance the processed-item counter and report it, if a callback is set.
+
+        Progress is measured in processed items (images / threshold-images), not
+        time, so the reported fraction is exact and predictable.
+
+        Args:
+            phase: Short label of the current phase (residual_maps / thresholds /
+                metrics / reconstruction).
+            step: How many items were just processed.
+        """
+        self._progress_current += step
+        if self._progress_callback is not None:
+            self._progress_callback(self._progress_current, self._progress_total, phase)
 
     @staticmethod
     def load_train_params(weights_dir: str) -> dict:
@@ -343,6 +363,8 @@ class TestAutoEncoder:
             plt.close()
             gc.collect()
 
+            self._advance_progress("reconstruction")
+
     def plot_ori_rec_mask_images(self, test_img: np.ndarray, rec_img: np.ndarray, mask: np.ndarray,
                                  vis_img: np.ndarray, idx: int, ssim_threshold: float) -> None:
         """
@@ -462,6 +484,7 @@ class TestAutoEncoder:
             test_img, rec_img, ssim_residual_map = self.get_residual_map(test_img_path)
             gt = self.cached_gt_images.get(gt_img_path)
             cache.append((test_img, rec_img, ssim_residual_map, gt))
+            self._advance_progress("residual_maps")
         return cache
 
     def get_results(self, ssim_threshold: float, save_vis: bool) -> tuple:
@@ -540,6 +563,8 @@ class TestAutoEncoder:
             ssim_list.append(ssim_res)
             mse_list.append(mse_res)
 
+            self._advance_progress("metrics")
+
         avg_ssim = avg_of_list(ssim_list)
         mse_avg = avg_of_list(mse_list)
 
@@ -548,13 +573,21 @@ class TestAutoEncoder:
 
         return avg_ssim, mse_avg
 
-    def run(self) -> dict:
+    def run(self, progress_callback=None) -> dict:
         """
         Execute the ROC/SSIM/MSE evaluation or the reconstruction visualization.
+
+        Args:
+            progress_callback: Optional callable(current, total, phase) invoked as
+                items are processed so the caller (the Celery task) can report
+                evaluation progress. None disables progress reporting.
 
         Returns:
             dict: Summary of the run with the main metrics and output paths.
         """
+        self._progress_callback = progress_callback
+        self._progress_current = 0
+
         if not self.test_cfg.get("vis_reconstruction"):
             threshold_range = self.threshold_calculator(
                 start=self.test_cfg.get("threshold_init"),
@@ -564,6 +597,15 @@ class TestAutoEncoder:
 
             if len(threshold_range) == 0:
                 raise ValueError("Empty threshold range - check threshold_init/threshold_end/num_of_steps")
+
+            # Progress is counted in processed images across all three phases:
+            # residual maps (test images), the threshold sweep (steps x test
+            # images) and the SSIM/MSE pass (train images).
+            self._progress_total = (
+                len(self.test_images)
+                + len(threshold_range) * len(self.test_images)
+                + len(self.train_images)
+            )
 
             self.residual_cache = self.build_residual_cache()
 
@@ -578,6 +620,7 @@ class TestAutoEncoder:
                 fpr, tpr = self.get_results(ssim_tresh, save_vis)
                 fpr_list.append(float(fpr))
                 tpr_list.append(float(tpr))
+                self._advance_progress("thresholds", step=len(self.test_images))
 
             filename = os.path.join(str(self.metrics_save_dir), "fpr_tpr_ssim_mse_roc_auc_results.json")
             avg_ssim, mse_avg = self.calculate_ssim_mse()
@@ -604,6 +647,7 @@ class TestAutoEncoder:
                 "weights_used": self.weights_path,
             }
 
+        self._progress_total = len(self.test_images)
         self.plot_ori_rec_images()
         return {
             "status": "DONE",

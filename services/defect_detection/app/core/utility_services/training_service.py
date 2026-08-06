@@ -257,22 +257,31 @@ class TrainAutoEncoder:
 
         return val_losses
 
-    def fit(self) -> dict:
+    def fit(self, progress_callback=None) -> dict:
         """
         Train the model with early stopping and save the best weights.
 
+        Args:
+            progress_callback: Optional callable(current, total, phase) invoked
+                after every completed epoch so the caller (the Celery task) can
+                report training progress. None disables progress reporting.
+
         Returns:
-            dict: Summary with status, best valid loss, epochs run and weights path.
+            dict: Summary with status, best valid loss, epochs run, total epochs,
+            whether early stopping was triggered, and the weights path.
         """
+        total_epochs = self.train_cfg.get("epochs")
+
         best_valid_loss = float("inf")
         best_model_path = None
         early_stopping_counter = 0
+        early_stopped = False
 
         train_losses = []
         valid_losses = []
         epoch = 0
 
-        for epoch in tqdm(range(self.train_cfg.get("epochs")), desc="Epochs"):
+        for epoch in tqdm(range(total_epochs), desc="Epochs"):
             train_losses = self.train_loop(epoch, train_losses)
             valid_losses = self.valid_loop(valid_losses)
 
@@ -301,6 +310,9 @@ class TrainAutoEncoder:
                 results_dict={**self.train_cfg, "last_completed_epoch": epoch+1},
             )
 
+            if progress_callback is not None:
+                progress_callback(epoch + 1, total_epochs, "epochs")
+
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
                 if best_model_path is not None:
@@ -314,6 +326,7 @@ class TrainAutoEncoder:
                 logging.warning(f"Early stopping counter: {early_stopping_counter}")
                 if early_stopping_counter >= self.train_cfg.get("early_stopping"):
                     logging.info(f"Early stopping at epoch {epoch}")
+                    early_stopped = True
                     break
 
         self.writer.close()
@@ -325,5 +338,7 @@ class TrainAutoEncoder:
             "dataset_type": self.dataset_type,
             "best_valid_loss": float(best_valid_loss),
             "epochs_run": epoch + 1,
+            "total_epochs": total_epochs,
+            "early_stopped": early_stopped,
             "weights_path": best_model_path,
         }

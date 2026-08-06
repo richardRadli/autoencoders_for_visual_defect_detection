@@ -20,6 +20,29 @@ celery_app.conf.update(
 )
 
 
+def _progress_reporter(task):
+    """
+    Build a progress callback that forwards processed-item counts to Celery.
+
+    The returned callable matches the progress_callback signature used by the
+    training and testing services, and reports each update as a PROGRESS state
+    with a {current, total, phase} meta the frontend renders as a progress bar.
+
+    Args:
+        task: The bound Celery task whose state should carry the progress.
+
+    Returns:
+        Callable(current, total, phase): Reports one PROGRESS state update.
+    """
+    def report(current: int, total: int, phase: str) -> None:
+        task.update_state(
+            state="PROGRESS",
+            meta={"current": current, "total": total, "phase": phase},
+        )
+
+    return report
+
+
 @celery_app.task(bind=True)
 def train_autoencoder_task(self, config: dict):
     """
@@ -33,8 +56,16 @@ def train_autoencoder_task(self, config: dict):
         dict: The training result summary (status, best valid loss, weights path).
     """
     logging.info("Starting autoencoder training task")
-    self.update_state(state="PROGRESS", meta={"status": "Training in progress"})
-    return TrainAutoEncoder(config).fit()
+    self.update_state(
+        state="PROGRESS",
+        meta={
+            "status": "Training in progress",
+            "current": 0,
+            "total": config["epochs"],
+            "phase": "epochs",
+        },
+    )
+    return TrainAutoEncoder(config).fit(progress_callback=_progress_reporter(self))
 
 @celery_app.task(bind=True)
 def test_autoencoder_task(self, config: dict):
@@ -50,4 +81,4 @@ def test_autoencoder_task(self, config: dict):
     """
     logging.info("Starting autoencoder testing task")
     self.update_state(state="PROGRESS", meta={"status": "Testing in progress"})
-    return TestAutoEncoder(config).run()
+    return TestAutoEncoder(config).run(progress_callback=_progress_reporter(self))
