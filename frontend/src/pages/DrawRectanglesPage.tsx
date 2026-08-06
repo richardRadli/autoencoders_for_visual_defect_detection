@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react"
 
-import { runDrawRectangles, stopDrawRectangles } from "../api/dataOperations"
+import {
+  DRAW_RECTANGLES_STOP_PATH,
+  runDrawRectangles,
+  stopDrawRectangles,
+} from "../api/dataOperations"
 import { DATASET_TYPES, LIMITS, SOURCE_IMAGES } from "../api/types"
 import type {
   DatasetType,
@@ -18,6 +22,7 @@ import { PreviewGrid } from "../components/PreviewGrid/PreviewGrid"
 import { RunControls } from "../components/RunControls/RunControls"
 import { StatusGrid } from "../components/StatusGrid/StatusGrid"
 import type { RunState } from "../hooks/useBlockingRun"
+import { useAutoStopOnLeave } from "../hooks/useAutoStopOnLeave"
 import { useBlockingRun } from "../hooks/useBlockingRun"
 import { useOpsPreview } from "../hooks/usePreview"
 import { formatElapsedTime } from "../utils/format"
@@ -50,6 +55,7 @@ export function DrawRectanglesPage() {
   const [sizeOfCover, setSizeOfCover] = useState("")
 
   const run = useBlockingRun(runDrawRectangles, stopDrawRectangles)
+  useAutoStopOnLeave(run.state === "running", DRAW_RECTANGLES_STOP_PATH)
   const preview = useOpsPreview(datasetType, "noise")
   const result = run.result
 

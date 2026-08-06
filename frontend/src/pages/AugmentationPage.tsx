@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react"
 
-import { runAugmentation, stopAugmentation } from "../api/dataOperations"
+import {
+  AUGMENTATION_STOP_PATH,
+  runAugmentation,
+  stopAugmentation,
+} from "../api/dataOperations"
 import { CROP_SIZES, DATASET_TYPES, IMG_SIZES, LIMITS } from "../api/types"
 import type {
   AugmentationParams,
@@ -19,6 +23,7 @@ import { PreviewGrid } from "../components/PreviewGrid/PreviewGrid"
 import { RunControls } from "../components/RunControls/RunControls"
 import { StatusGrid } from "../components/StatusGrid/StatusGrid"
 import type { RunState } from "../hooks/useBlockingRun"
+import { useAutoStopOnLeave } from "../hooks/useAutoStopOnLeave"
 import { useBlockingRun } from "../hooks/useBlockingRun"
 import { useOpsPreview } from "../hooks/usePreview"
 import { formatElapsedTime } from "../utils/format"
@@ -54,6 +59,7 @@ export function AugmentationPage() {
   const [verticalFlipCount, setVerticalFlipCount] = useState("")
 
   const run = useBlockingRun(runAugmentation, stopAugmentation)
+  useAutoStopOnLeave(run.state === "running", AUGMENTATION_STOP_PATH)
   const preview = useOpsPreview(datasetType, "aug")
   const result = run.result
 

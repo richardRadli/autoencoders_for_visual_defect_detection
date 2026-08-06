@@ -18,12 +18,17 @@ import type {
    AbortSignal on purpose: aborting the fetch would drop the response but keep
    the job running on the server. Use the stop endpoints for that. */
 
+/* Exposed so useAutoStopOnLeave can hit the same endpoint via sendBeacon on
+   page unload, where the fetch-based helpers below cannot run. */
+export const AUGMENTATION_STOP_PATH = `${DATA_OPS}/augmentation/stop`
+export const DRAW_RECTANGLES_STOP_PATH = `${DATA_OPS}/draw-rectangles/stop`
+
 export function runAugmentation(params: AugmentationParams): Promise<AugmentationResult> {
   return apiPost<AugmentationResult>(buildUrl(DATA_OPS, "/augmentation/run", params))
 }
 
 export function stopAugmentation(): Promise<StopResult> {
-  return apiPost<StopResult>(`${DATA_OPS}/augmentation/stop`)
+  return apiPost<StopResult>(AUGMENTATION_STOP_PATH)
 }
 
 export function runDrawRectangles(
@@ -33,7 +38,7 @@ export function runDrawRectangles(
 }
 
 export function stopDrawRectangles(): Promise<StopResult> {
-  return apiPost<StopResult>(`${DATA_OPS}/draw-rectangles/stop`)
+  return apiPost<StopResult>(DRAW_RECTANGLES_STOP_PATH)
 }
 
 /* Dataset ---------------------------------------------------------------- */
