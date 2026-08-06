@@ -30,6 +30,7 @@ import { ParamField } from "../components/ParamField/ParamField"
 import { RunControls } from "../components/RunControls/RunControls"
 import { RunningNotice } from "../components/RunningNotice/RunningNotice"
 import { StatusGrid } from "../components/StatusGrid/StatusGrid"
+import { useDeviceStatus } from "../hooks/useDeviceStatus"
 import type { TaskRunState } from "../hooks/useTaskPolling"
 import { useTaskPolling } from "../hooks/useTaskPolling"
 import { useReadiness } from "../hooks/useReadiness"
@@ -183,6 +184,8 @@ export function TrainingPage() {
     datasetType,
   )
 
+  const deviceStatus = useDeviceStatus()
+
   const selectedNetworkType = resolveNetworkType(
     aeType,
     modelSize,
@@ -288,6 +291,18 @@ export function TrainingPage() {
     : undefined
 
   const targetLabel = task.result ? "weights" : undefined
+
+  const deviceBadge = deviceStatus.loading ? (
+    "Checking..."
+  ) : deviceStatus.error ? (
+    "Unavailable"
+  ) : deviceStatus.data?.device === "cuda" ? (
+    <Badge variant="success">GPU</Badge>
+  ) : deviceStatus.data?.device === "cpu" ? (
+    <Badge variant="danger">CPU</Badge>
+  ) : undefined
+
+  const usingCpu = deviceStatus.data?.device === "cpu"
 
   return (
     <div className={styles.page}>
@@ -677,6 +692,10 @@ export function TrainingPage() {
                     task.result?.network_type ??
                     submittedNetworkType,
                 },
+                {
+                  label: "device",
+                  value: deviceBadge,
+                },
                 ...(showDenoiseCounts
                   ? [
                       {
@@ -722,6 +741,13 @@ export function TrainingPage() {
                 },
               ]}
             />
+
+            {usingCpu ? (
+              <p className={styles.error} role="alert">
+                No GPU available. Training will use the CPU and may take
+                significantly longer.
+              </p>
+            ) : null}
 
             {task.taskId ? (
               <p title={task.taskId}>

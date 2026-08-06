@@ -38,6 +38,7 @@ import { PreviewGrid } from "../components/PreviewGrid/PreviewGrid"
 import { RunControls } from "../components/RunControls/RunControls"
 import { RunningNotice } from "../components/RunningNotice/RunningNotice"
 import { StatusGrid } from "../components/StatusGrid/StatusGrid"
+import { useDeviceStatus } from "../hooks/useDeviceStatus"
 import { useDefectPreview } from "../hooks/usePreview"
 import { useReadiness } from "../hooks/useReadiness"
 import type { TaskRunState } from "../hooks/useTaskPolling"
@@ -220,6 +221,8 @@ export function TestingPage() {
     datasetType,
   )
 
+  const deviceStatus = useDeviceStatus()
+
   const selectedNetworkType = resolveNetworkType(
     aeType,
     modelSize,
@@ -400,6 +403,18 @@ export function TestingPage() {
         info: task.result ?? task.error,
       }
     : null
+
+  const deviceBadge = deviceStatus.loading ? (
+    "Checking..."
+  ) : deviceStatus.error ? (
+    "Unavailable"
+  ) : deviceStatus.data?.device === "cuda" ? (
+    <Badge variant="success">GPU</Badge>
+  ) : deviceStatus.data?.device === "cpu" ? (
+    <Badge variant="danger">CPU</Badge>
+  ) : undefined
+
+  const usingCpu = deviceStatus.data?.device === "cpu"
 
   return (
     <div className={styles.page}>
@@ -764,6 +779,10 @@ export function TestingPage() {
                     submittedNetworkType,
                 },
                 {
+                  label: "device",
+                  value: deviceBadge,
+                },
+                {
                   label: "subtest_folder",
                   value:
                     metricsResult?.subtest_folder ??
@@ -803,6 +822,13 @@ export function TestingPage() {
                   : []),
               ]}
             />
+
+            {usingCpu ? (
+              <p className={styles.error} role="alert">
+                No GPU available. Testing will use the CPU and may take
+                significantly longer.
+              </p>
+            ) : null}
 
             {task.taskId ? (
               <p title={task.taskId}>
