@@ -7,6 +7,7 @@ import type {
   DrawRectanglesResult,
   OpsPreviewList,
   OpsPreviewType,
+  OpsProgress,
   OpsReadiness,
   StopResult,
 } from "./types"
@@ -39,6 +40,17 @@ export function runDrawRectangles(
 
 export function stopDrawRectangles(): Promise<StopResult> {
   return apiPost<StopResult>(DRAW_RECTANGLES_STOP_PATH)
+}
+
+/* Progress for the blocking runs, polled (via useOpsProgress) while a run is
+   in flight. Unlike the run endpoints these are plain GETs and take a signal
+   so the poll can be aborted. */
+export function getAugmentationProgress(signal?: AbortSignal): Promise<OpsProgress> {
+  return apiGet<OpsProgress>(`${DATA_OPS}/augmentation/progress`, signal)
+}
+
+export function getDrawRectanglesProgress(signal?: AbortSignal): Promise<OpsProgress> {
+  return apiGet<OpsProgress>(`${DATA_OPS}/draw-rectangles/progress`, signal)
 }
 
 /* Dataset ---------------------------------------------------------------- */

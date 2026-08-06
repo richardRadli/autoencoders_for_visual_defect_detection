@@ -99,6 +99,14 @@ export type OpsPreviewList = {
   images: string[]
 }
 
+/* Progress for the blocking data_operations runs (augmentation / draw
+   rectangles), polled while a run is in flight. */
+export type OpsProgress = {
+  running: boolean
+  processed: number
+  total: number
+}
+
 /* defect_detection -------------------------------------------------------- */
 
 export type DeviceStatus =
@@ -165,8 +173,15 @@ export type QueuedTask = {
   status: TaskState
 }
 
+/* PROGRESS meta from the worker. The initial update may carry only a status
+   message; per-item updates carry current/total and a short phase label
+   (training: "epochs"; testing: "residual_maps" / "thresholds" / "metrics" /
+   "reconstruction"). */
 export type TaskProgress = {
-  status: string
+  status?: string
+  current?: number
+  total?: number
+  phase?: string
 }
 
 export type TrainResult = {
@@ -175,6 +190,8 @@ export type TrainResult = {
   dataset_type: DatasetType
   best_valid_loss: number
   epochs_run: number
+  total_epochs: number
+  early_stopped: boolean
   weights_path: string | null
 }
 

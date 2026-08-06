@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { isAbortError } from "../api/client"
-import type { QueuedTask, TaskState, TaskStatus } from "../api/types"
+import type { QueuedTask, TaskProgress, TaskState, TaskStatus } from "../api/types"
 
 export type TaskRunState = "idle" | "running" | "done" | "error" | "stopped"
 
@@ -14,6 +14,7 @@ export type TaskRun<P, R> = {
   state: TaskRunState
   taskId: string | null
   taskState: TaskState | null
+  progress: TaskProgress | null
   result: R | null
   error: string | null
   elapsedMs: number
@@ -191,7 +192,8 @@ function loadPersistedTask<P, R>(
 /*
  * Drives Celery-backed train and test runs. When storageKey is provided,
  * the task id, submitted parameters, result and elapsed time survive page
- * navigation and browser refreshes.
+ * navigation and browser refreshes. Live PROGRESS meta is exposed as
+ * `progress` (not persisted — the next poll repopulates it after a refresh).
  */
 export function useTaskPolling<P, R>(
   run: (params: P) => Promise<QueuedTask>,
@@ -221,6 +223,7 @@ export function useTaskPolling<P, R>(
   const [taskState, setTaskState] = useState<TaskState | null>(
     initial.taskState,
   )
+  const [progress, setProgress] = useState<TaskProgress | null>(null)
   const [result, setResult] = useState<R | null>(initial.result)
   const [error, setError] = useState<string | null>(initial.error)
   const [elapsedMs, setElapsedMs] = useState(initial.elapsedMs)
@@ -315,6 +318,10 @@ export function useTaskPolling<P, R>(
 
         setTaskState(status.status)
 
+        if (status.status === "PROGRESS" && isRecord(status.info)) {
+          setProgress(status.info as TaskProgress)
+        }
+
         if (status.status === "SUCCESS") {
           setResult(status.info as R)
           setError(null)
@@ -382,6 +389,7 @@ export function useTaskPolling<P, R>(
       setState("running")
       setTaskId(null)
       setTaskState(null)
+      setProgress(null)
       setResult(null)
       setError(null)
       setElapsedMs(0)
@@ -469,6 +477,7 @@ export function useTaskPolling<P, R>(
     setState("idle")
     setTaskId(null)
     setTaskState(null)
+    setProgress(null)
     setResult(null)
     setError(null)
     setElapsedMs(0)
@@ -480,6 +489,7 @@ export function useTaskPolling<P, R>(
     state,
     taskId,
     taskState,
+    progress,
     result,
     error,
     elapsedMs,
