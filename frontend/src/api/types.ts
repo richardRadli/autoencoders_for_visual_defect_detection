@@ -123,6 +123,17 @@ export type DefectReadiness = {
   trained_networks: NetworkType[]
 }
 
+export type WeightRun = {
+  run: string
+  weights_file: string
+}
+
+export type WeightsList = {
+  dataset_type: DatasetType
+  network_type: NetworkType
+  weights: WeightRun[]
+}
+
 export type DefectPreviewType =
   | "test"
   | "reconstruction"
@@ -232,6 +243,7 @@ export type TestingParams = {
   ae_type?: AEType
   model_size?: ModelSize
   subtest_folder?: SubtestFolder
+  weights_run?: string
   stride?: Stride
   num_of_steps?: number
   threshold_init?: number

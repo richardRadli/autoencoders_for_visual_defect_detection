@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 
 import {
@@ -39,9 +39,10 @@ import { RunControls } from "../components/RunControls/RunControls"
 import { RunningNotice } from "../components/RunningNotice/RunningNotice"
 import { StatusGrid } from "../components/StatusGrid/StatusGrid"
 import { useDefectPreview } from "../hooks/usePreview"
+import { useReadiness } from "../hooks/useReadiness"
 import type { TaskRunState } from "../hooks/useTaskPolling"
 import { useTaskPolling } from "../hooks/useTaskPolling"
-import { useReadiness } from "../hooks/useReadiness"
+import { useWeightsList } from "../hooks/useWeightsList"
 import { formatElapsedTime } from "../utils/format"
 import styles from "./TestingPage.module.css"
 
@@ -184,6 +185,10 @@ export function TestingPage() {
     restored?.stride ?? 32,
   )
 
+  const [weightsRun, setWeightsRun] = useState(
+    restored?.weights_run ?? "",
+  )
+
   const [numOfSteps, setNumOfSteps] = useState(
     toInputValue(restored?.num_of_steps),
   )
@@ -220,6 +225,38 @@ export function TestingPage() {
     modelSize,
   )
 
+  const weightsList = useWeightsList(
+    datasetType,
+    selectedNetworkType,
+  )
+
+  const weightsDataMatchesSelection =
+    weightsList.data?.dataset_type === datasetType &&
+    weightsList.data.network_type === selectedNetworkType
+
+  const availableWeights =
+    weightsDataMatchesSelection
+      ? (weightsList.data?.weights ?? [])
+      : []
+
+  useEffect(() => {
+    if (!weightsDataMatchesSelection) {
+      return
+    }
+
+    setWeightsRun((current) => {
+      const currentStillExists = availableWeights.some(
+        (weight) => weight.run === current,
+      )
+
+      if (currentStillExists) {
+        return current
+      }
+
+      return availableWeights[0]?.run ?? ""
+    })
+  }, [weightsDataMatchesSelection, weightsList.data])
+
   const modelReady =
     readiness.data?.trained_networks.includes(
       selectedNetworkType,
@@ -237,10 +274,18 @@ export function TestingPage() {
     parsedThresholdEnd !== undefined &&
     parsedThresholdInit >= parsedThresholdEnd
 
+  const weightsUnavailable =
+    weightsList.loading ||
+    weightsList.error !== null ||
+    !weightsDataMatchesSelection ||
+    availableWeights.length === 0 ||
+    weightsRun === ""
+
   const startDisabled =
     readiness.loading ||
     readiness.error !== null ||
     !modelReady ||
+    weightsUnavailable ||
     visualizationConflict ||
     thresholdOrderInvalid
 
@@ -264,6 +309,7 @@ export function TestingPage() {
       ae_type: aeType,
       model_size: modelSize,
       subtest_folder: subtestFolder,
+      weights_run: weightsRun || undefined,
       stride,
       num_of_steps: toNumber(numOfSteps),
       threshold_init: toNumber(thresholdInit),
@@ -357,7 +403,10 @@ export function TestingPage() {
 
   return (
     <div className={styles.page}>
-      <RunningNotice running={task.state === "running"} label="Testing" />
+      <RunningNotice
+        running={task.state === "running"}
+        label="Testing"
+      />
 
       <Breadcrumb step="testing" />
 
@@ -480,6 +529,49 @@ export function TestingPage() {
               </select>
             </ParamField>
 
+            <ParamField
+              label="weights_file"
+              tooltip="Trained weights used for testing. The newest usable run is selected by default."
+            >
+              <select
+                value={weightsRun}
+                disabled={
+                  weightsList.loading ||
+                  weightsList.error !== null ||
+                  !weightsDataMatchesSelection ||
+                  availableWeights.length === 0
+                }
+                onChange={(event) =>
+                  setWeightsRun(event.target.value)
+                }
+              >
+                {weightsList.loading ||
+                !weightsDataMatchesSelection ? (
+                  <option value="">
+                    Loading weights...
+                  </option>
+                ) : weightsList.error ? (
+                  <option value="">
+                    Weights unavailable
+                  </option>
+                ) : availableWeights.length === 0 ? (
+                  <option value="">
+                    No weights available
+                  </option>
+                ) : (
+                  availableWeights.map((weight, index) => (
+                    <option
+                      key={weight.run}
+                      value={weight.run}
+                    >
+                      {weight.run} / {weight.weights_file}
+                      {index === 0 ? " (latest)" : ""}
+                    </option>
+                  ))
+                )}
+              </select>
+            </ParamField>
+
             <h3>Optional overrides</h3>
             <p>
               Empty fields use the values from
@@ -599,6 +691,12 @@ export function TestingPage() {
           {readiness.error ? (
             <p className={styles.error}>
               Readiness check failed: {readiness.error}
+            </p>
+          ) : null}
+
+          {weightsList.error ? (
+            <p className={styles.error}>
+              Weight list failed: {weightsList.error}
             </p>
           ) : null}
 

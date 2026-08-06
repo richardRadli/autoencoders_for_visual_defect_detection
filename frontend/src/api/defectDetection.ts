@@ -13,6 +13,7 @@ import type {
   TestingParams,
   TrainStatus,
   TrainingParams,
+  WeightsList,
 } from "./types"
 
 /* Device ----------------------------------------------------------------- */
@@ -73,6 +74,20 @@ export function getDefectReadiness(
 ): Promise<DefectReadiness> {
   return apiGet<DefectReadiness>(
     buildUrl(DEFECT, "/dataset/readiness", { dataset_type }),
+    signal,
+  )
+}
+
+export function getWeightsList(
+  dataset_type: DatasetType,
+  network_type: NetworkType,
+  signal?: AbortSignal,
+): Promise<WeightsList> {
+  return apiGet<WeightsList>(
+    buildUrl(DEFECT, "/dataset/weights", {
+      dataset_type,
+      network_type,
+    }),
     signal,
   )
 }
