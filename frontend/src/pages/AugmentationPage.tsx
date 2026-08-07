@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 
 import {
   AUGMENTATION_STOP_PATH,
+  getAugmentationProgress,
   runAugmentation,
   stopAugmentation,
 } from "../api/dataOperations"
@@ -19,6 +20,7 @@ import { JsonPanel } from "../components/JsonPanel/JsonPanel"
 import { PageNav } from "../components/PageNav/PageNav"
 import { Panel } from "../components/Panel/Panel"
 import { ParamField } from "../components/ParamField/ParamField"
+import { ProgressBar } from "../components/ProgressBar/ProgressBar"
 import { PreviewGrid } from "../components/PreviewGrid/PreviewGrid"
 import { RunControls } from "../components/RunControls/RunControls"
 import { StatusGrid } from "../components/StatusGrid/StatusGrid"
@@ -26,6 +28,7 @@ import type { RunState } from "../hooks/useBlockingRun"
 import { useAutoStopOnLeave } from "../hooks/useAutoStopOnLeave"
 import { useBlockingRun } from "../hooks/useBlockingRun"
 import { useOpsPreview } from "../hooks/usePreview"
+import { useOpsProgress } from "../hooks/useOpsProgress"
 import { formatElapsedTime } from "../utils/format"
 import styles from "./AugmentationPage.module.css"
 
@@ -60,6 +63,10 @@ export function AugmentationPage() {
 
   const run = useBlockingRun(runAugmentation, stopAugmentation)
   useAutoStopOnLeave(run.state === "running", AUGMENTATION_STOP_PATH)
+  const opsProgress = useOpsProgress(
+    getAugmentationProgress,
+    run.state === "running",
+  )
   const preview = useOpsPreview(datasetType, "aug")
   const result = run.result
 
@@ -83,6 +90,10 @@ export function AugmentationPage() {
   }
 
   const badge = RUN_BADGE[run.state]
+
+  const isRunning = run.state === "running"
+  const isDone = run.state === "done"
+  const showProgress = isRunning || isDone
 
   const previewTitle =
     run.state === "done" || run.state === "stopped"
@@ -259,6 +270,16 @@ export function AugmentationPage() {
                 },
               ]}
             />
+
+            {showProgress ? (
+              <ProgressBar
+                className={styles.progress}
+                current={isDone ? 100 : opsProgress?.processed}
+                total={isDone ? 100 : opsProgress?.total}
+                variant={isDone ? "success" : "accent"}
+                showCount={isRunning}
+              />
+            ) : null}
 
             {run.error ? <p className={styles.error}>{run.error}</p> : null}
 

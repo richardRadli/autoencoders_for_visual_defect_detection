@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 
 import {
   DRAW_RECTANGLES_STOP_PATH,
+  getDrawRectanglesProgress,
   runDrawRectangles,
   stopDrawRectangles,
 } from "../api/dataOperations"
@@ -18,6 +19,7 @@ import { JsonPanel } from "../components/JsonPanel/JsonPanel"
 import { PageNav } from "../components/PageNav/PageNav"
 import { Panel } from "../components/Panel/Panel"
 import { ParamField } from "../components/ParamField/ParamField"
+import { ProgressBar } from "../components/ProgressBar/ProgressBar"
 import { PreviewGrid } from "../components/PreviewGrid/PreviewGrid"
 import { RunControls } from "../components/RunControls/RunControls"
 import { StatusGrid } from "../components/StatusGrid/StatusGrid"
@@ -25,6 +27,7 @@ import type { RunState } from "../hooks/useBlockingRun"
 import { useAutoStopOnLeave } from "../hooks/useAutoStopOnLeave"
 import { useBlockingRun } from "../hooks/useBlockingRun"
 import { useOpsPreview } from "../hooks/usePreview"
+import { useOpsProgress } from "../hooks/useOpsProgress"
 import { formatElapsedTime } from "../utils/format"
 import styles from "./DrawRectanglesPage.module.css"
 
@@ -56,6 +59,10 @@ export function DrawRectanglesPage() {
 
   const run = useBlockingRun(runDrawRectangles, stopDrawRectangles)
   useAutoStopOnLeave(run.state === "running", DRAW_RECTANGLES_STOP_PATH)
+  const opsProgress = useOpsProgress(
+    getDrawRectanglesProgress,
+    run.state === "running",
+  )
   const preview = useOpsPreview(datasetType, "noise")
   const result = run.result
 
@@ -76,6 +83,10 @@ export function DrawRectanglesPage() {
   }
 
   const badge = RUN_BADGE[run.state]
+
+  const isRunning = run.state === "running"
+  const isDone = run.state === "done"
+  const showProgress = isRunning || isDone
 
   const previewTitle =
     run.state === "done" || run.state === "stopped"
@@ -203,6 +214,16 @@ export function DrawRectanglesPage() {
                 },
               ]}
             />
+
+            {showProgress ? (
+              <ProgressBar
+                className={styles.progress}
+                current={isDone ? 100 : opsProgress?.processed}
+                total={isDone ? 100 : opsProgress?.total}
+                variant={isDone ? "success" : "accent"}
+                showCount={isRunning}
+              />
+            ) : null}
 
             {run.error ? <p className={styles.error}>{run.error}</p> : null}
           </Panel>

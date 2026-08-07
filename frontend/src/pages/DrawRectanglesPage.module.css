@@ -54,6 +54,10 @@
   gap: var(--space-5);
 }
 
+.progress {
+  margin-top: var(--space-4);
+}
+
 .error {
   margin: var(--space-4) 0 0;
   color: var(--danger);
