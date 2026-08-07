@@ -78,6 +78,7 @@ CONFIG_PATHS = PathGroup(
         "augmentation_config": "config/json_files/augmentation_config",
         "testing_config": "config/json_files/testing_config",
         "training_config": "config/json_files/training_config",
+        "tuning_config": "config/json_files/tuning_config",
         "network_config": "config/json_files/network_config",
     },
 )

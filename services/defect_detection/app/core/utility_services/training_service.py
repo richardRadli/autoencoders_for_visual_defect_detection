@@ -26,6 +26,11 @@ class TrainAutoEncoder:
         """
         Set up the model, data, loss, optimizer and save paths for one training run.
 
+        When config["save_artifacts"] is false (used only by Optuna tuning), no
+        weights folder, params.json or TensorBoard log is created and the run
+        stays fully in memory. It defaults to true, so normal training keeps
+        writing every artifact exactly as before.
+
         Args:
             config: Effective training config (already resolved by the API).
         """
@@ -33,6 +38,7 @@ class TrainAutoEncoder:
         setup_logger()
 
         self.train_cfg = config
+        self.save_artifacts = self.train_cfg.get("save_artifacts", True)
 
         if self.train_cfg.get("seed"):
             set_seed(seed=1234)
@@ -84,28 +90,36 @@ class TrainAutoEncoder:
             gamma=self.train_cfg.get("gamma"),
         )
 
-        tensorboard_log_dir = create_save_dirs(
-            directory_path=str(training_testing_paths(self.dataset_type)["model_logs"]),
-            network_type=self.network_type,
-            timestamp=self.timestamp,
-        )
+        # All disk artifacts (TensorBoard log, weights folder, params.json) are
+        # gated behind save_artifacts. Optuna tuning turns it off so a trial
+        # leaves nothing on disk; normal training keeps it on.
+        if self.save_artifacts:
+            tensorboard_log_dir = create_save_dirs(
+                directory_path=str(training_testing_paths(self.dataset_type)["model_logs"]),
+                network_type=self.network_type,
+                timestamp=self.timestamp,
+            )
 
-        self.writer = SummaryWriter(
-            log_dir=str(tensorboard_log_dir)
-        )
+            self.writer = SummaryWriter(
+                log_dir=str(tensorboard_log_dir)
+            )
 
-        self.save_path = create_save_dirs(
-            directory_path=str(training_testing_paths(self.dataset_type)["model_weights"]),
-            network_type=self.network_type,
-            timestamp=self.timestamp,
-        )
+            self.save_path = create_save_dirs(
+                directory_path=str(training_testing_paths(self.dataset_type)["model_weights"]),
+                network_type=self.network_type,
+                timestamp=self.timestamp,
+            )
 
-        self.params_path = os.path.join(str(self.save_path), "params.json")
-        save_list_to_json(
-            filename=self.params_path,
-            results_dict={**self.train_cfg, "last_completed_epoch": 0},
-        )
-        logging.info(f"Saved training params to {self.params_path}")
+            self.params_path = os.path.join(str(self.save_path), "params.json")
+            save_list_to_json(
+                filename=self.params_path,
+                results_dict={**self.train_cfg, "last_completed_epoch": 0},
+            )
+            logging.info(f"Saved training params to {self.params_path}")
+        else:
+            self.writer = None
+            self.save_path = None
+            self.params_path = None
 
     @staticmethod
     def _read_aug_sizes(aug_dir: str) -> Tuple[int, int]:
@@ -219,7 +233,7 @@ class TrainAutoEncoder:
             self.optimizer.step()
             train_losses.append(train_loss.item())
 
-            if (self.train_cfg.get("vis_during_training") and self.train_cfg.get("vis_interval")
+            if (self.save_artifacts and self.train_cfg.get("vis_during_training") and self.train_cfg.get("vis_interval")
                     and epoch % self.train_cfg.get("vis_interval") == 0 and batch_idx == 0):
                 vis_dir = create_save_dirs(
                     directory_path=str(training_testing_paths(self.dataset_type)["training_vis"]),
@@ -259,7 +273,9 @@ class TrainAutoEncoder:
 
     def fit(self, progress_callback=None) -> dict:
         """
-        Train the model with early stopping and save the best weights.
+        Train the model with early stopping, saving the best weights unless
+        artifact saving is disabled (Optuna tuning), in which case nothing is
+        written to disk and weights_path comes back as None.
 
         Args:
             progress_callback: Optional callable(current, total, phase) invoked
@@ -268,7 +284,8 @@ class TrainAutoEncoder:
 
         Returns:
             dict: Summary with status, best valid loss, epochs run, total epochs,
-            whether early stopping was triggered, and the weights path.
+            whether early stopping was triggered, and the weights path (None when
+            artifact saving is disabled).
         """
         total_epochs = self.train_cfg.get("epochs")
 
@@ -291,35 +308,38 @@ class TrainAutoEncoder:
             train_loss = np.average(train_losses)
             valid_loss = np.average(valid_losses)
 
-            self.writer.add_scalars(
-                "Loss",
-                {
-                    "Train": train_loss,
-                    "Valid": valid_loss,
-                },
-                epoch,
-            )
+            if self.save_artifacts:
+                self.writer.add_scalars(
+                    "Loss",
+                    {
+                        "Train": train_loss,
+                        "Valid": valid_loss,
+                    },
+                    epoch,
+                )
 
             logging.info(f"Train Loss: {train_loss:.5f} valid Loss: {valid_loss:.5f}")
 
             train_losses.clear()
             valid_losses.clear()
 
-            save_list_to_json(
-                filename=self.params_path,
-                results_dict={**self.train_cfg, "last_completed_epoch": epoch+1},
-            )
+            if self.save_artifacts:
+                save_list_to_json(
+                    filename=self.params_path,
+                    results_dict={**self.train_cfg, "last_completed_epoch": epoch+1},
+                )
 
             if progress_callback is not None:
                 progress_callback(epoch + 1, total_epochs, "epochs")
 
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
-                if best_model_path is not None:
-                    os.remove(best_model_path)
-                best_model_path = os.path.join(str(self.save_path), f"epoch_{epoch}.pt")
-                torch.save(self.model.state_dict(), best_model_path)
-                logging.info(f"New best weights at epoch {epoch} ({valid_loss:.5f})")
+                if self.save_artifacts:
+                    if best_model_path is not None:
+                        os.remove(best_model_path)
+                    best_model_path = os.path.join(str(self.save_path), f"epoch_{epoch}.pt")
+                    torch.save(self.model.state_dict(), best_model_path)
+                    logging.info(f"New best weights at epoch {epoch} ({valid_loss:.5f})")
                 early_stopping_counter = 0
             else:
                 early_stopping_counter += 1
@@ -329,8 +349,9 @@ class TrainAutoEncoder:
                     early_stopped = True
                     break
 
-        self.writer.close()
-        self.writer.flush()
+        if self.save_artifacts:
+            self.writer.close()
+            self.writer.flush()
 
         return {
             "status": "DONE",

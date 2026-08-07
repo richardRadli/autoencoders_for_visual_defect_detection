@@ -5,6 +5,7 @@ from celery import Celery
 
 from services.defect_detection.app.core.utility_services.testing_service import TestAutoEncoder
 from services.defect_detection.app.core.utility_services.training_service import TrainAutoEncoder
+from services.defect_detection.app.core.utility_services.tuning_service import TuneAutoEncoder
 
 CELERY_BROKER = os.getenv("CELERY_BROKER_URL", "redis://redis_broker:6379/0")
 CELERY_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis_broker:6379/0")
@@ -85,3 +86,27 @@ def test_autoencoder_task(self, config: dict):
         meta={"current": 0, "total": 100, "phase": "starting"},
     )
     return TestAutoEncoder(config).run(progress_callback=_progress_reporter(self))
+
+@celery_app.task(bind=True)
+def tune_autoencoder_task(self, config: dict):
+    """
+    Background Optuna hyperparameter tuning task.
+
+    Args:
+        self: Bound Celery task instance.
+        config: Effective tuning config from the API.
+
+    Returns:
+        dict: The tuning result (status, best params, best valid loss).
+    """
+    logging.info("Starting autoencoder tuning task")
+    self.update_state(
+        state="PROGRESS",
+        meta={
+            "status": "Tuning in progress",
+            "current": 0,
+            "total": config["n_trials"] * config["epochs_per_trial"],
+            "phase": f"trial 1/{config['n_trials']}",
+        },
+    )
+    return TuneAutoEncoder(config).run(progress_callback=_progress_reporter(self))

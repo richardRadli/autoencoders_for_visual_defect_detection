@@ -9,6 +9,7 @@ from shared.core.data_paths import init_all_paths
 from utils.system_utils import setup_logger
 from services.defect_detection.app.api.device_status_api import device_status_router
 from services.defect_detection.app.api.train_api import train_router
+from services.defect_detection.app.api.tune_api import tune_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,6 +39,7 @@ app.include_router(device_status_router)
 app.include_router(train_router)
 app.include_router(test_router)
 app.include_router(defect_dataset_router)
+app.include_router(tune_router)
 
 
 @app.get("/")

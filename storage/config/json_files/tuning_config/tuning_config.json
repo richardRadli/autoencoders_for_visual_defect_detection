@@ -1,0 +1,13 @@
+{
+  "n_trials": 20,
+  "epochs_per_trial": 5,
+  "learning_rate_min": 0.00001,
+  "learning_rate_max": 0.01,
+  "latent_space_dimension_min": 16,
+  "latent_space_dimension_max": 256,
+  "step_size_min": 5,
+  "step_size_max": 30,
+  "gamma_min": 0.1,
+  "gamma_max": 0.9,
+  "batch_size_values": [32, 64, 128]
+}
