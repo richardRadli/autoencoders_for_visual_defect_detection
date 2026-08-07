@@ -35,6 +35,7 @@ import { PageNav } from "../components/PageNav/PageNav"
 import { Panel } from "../components/Panel/Panel"
 import { ParamField } from "../components/ParamField/ParamField"
 import { PreviewGrid } from "../components/PreviewGrid/PreviewGrid"
+import { ProgressBar } from "../components/ProgressBar/ProgressBar"
 import { RunControls } from "../components/RunControls/RunControls"
 import { RunningNotice } from "../components/RunningNotice/RunningNotice"
 import { StatusGrid } from "../components/StatusGrid/StatusGrid"
@@ -822,6 +823,16 @@ export function TestingPage() {
                   : []),
               ]}
             />
+
+            {task.state === "running" ? (
+              <ProgressBar
+                className={styles.progress}
+                current={task.progress?.current}
+                total={task.progress?.total}
+                phase={task.progress?.phase}
+                variant="accent"
+              />
+            ) : null}
 
             {usingCpu ? (
               <p className={styles.error} role="alert">

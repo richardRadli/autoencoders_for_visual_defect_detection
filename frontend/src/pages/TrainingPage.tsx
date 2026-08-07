@@ -27,6 +27,7 @@ import { JsonPanel } from "../components/JsonPanel/JsonPanel"
 import { PageNav } from "../components/PageNav/PageNav"
 import { Panel } from "../components/Panel/Panel"
 import { ParamField } from "../components/ParamField/ParamField"
+import { ProgressBar } from "../components/ProgressBar/ProgressBar"
 import { RunControls } from "../components/RunControls/RunControls"
 import { RunningNotice } from "../components/RunningNotice/RunningNotice"
 import { StatusGrid } from "../components/StatusGrid/StatusGrid"
@@ -270,7 +271,25 @@ export function TrainingPage() {
     void task.start(params)
   }
 
-  const badge = RUN_BADGE[task.state]
+  const isRunning = task.state === "running"
+  const isDone = task.state === "done"
+  const earlyStopped = isDone && task.result?.early_stopped === true
+
+  const badge = earlyStopped
+    ? { variant: "success" as BadgeVariant, label: "Early Stopped" }
+    : RUN_BADGE[task.state]
+
+  const showProgress = isRunning || isDone
+  const progressVariant: "accent" | "success" = isDone
+    ? "success"
+    : "accent"
+  const progressCurrent = isDone
+    ? task.result?.epochs_run
+    : task.progress?.current
+  const progressTotal = isDone
+    ? task.result?.total_epochs
+    : task.progress?.total
+  const progressPhase = isDone ? "epochs" : task.progress?.phase
 
   const statusOutput = task.taskId
     ? {
@@ -741,6 +760,18 @@ export function TrainingPage() {
                 },
               ]}
             />
+
+            {showProgress ? (
+              <ProgressBar
+                className={styles.progress}
+                current={progressCurrent}
+                total={progressTotal}
+                phase={progressPhase}
+                variant={progressVariant}
+              />
+            ) : null}
+
+            {earlyStopped ? <p>Best weights saved</p> : null}
 
             {usingCpu ? (
               <p className={styles.error} role="alert">

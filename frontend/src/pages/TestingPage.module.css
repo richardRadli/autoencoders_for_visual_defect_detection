@@ -87,6 +87,10 @@
   line-height: var(--leading-normal);
 }
 
+.progress {
+  margin-top: var(--space-4);
+}
+
 .results code {
   color: var(--text-secondary);
   overflow-wrap: anywhere;

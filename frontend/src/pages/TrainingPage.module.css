@@ -92,6 +92,10 @@
   line-height: var(--leading-normal);
 }
 
+.progress {
+  margin-top: var(--space-4);
+}
+
 .error {
   margin-top: var(--space-4);
   padding: var(--space-3) var(--space-4);
