@@ -40,8 +40,12 @@ class TestAutoEncoder:
         self.test_cfg = config
 
         self._progress_callback = None
-        self._progress_current = 0
-        self._progress_total = 0
+        self._current_phase = None
+        self._phase_start = 0.0
+        self._phase_span = 0.0
+        self._phase_total = 0
+        self._phase_done = 0
+        self._last_emitted = None
 
         self.network_type = self.test_cfg.get("network_type")
         self.dataset_type = self.test_cfg.get("dataset_type")
@@ -177,21 +181,82 @@ class TestAutoEncoder:
         # file_reader sorts numerically, so the last file is the highest epoch.
         return weight_files[-1]
 
-    def _advance_progress(self, phase: str, step: int = 1) -> None:
+    def _init_progress(self, callback) -> None:
         """
-        Advance the processed-item counter and report it, if a callback is set.
+        Reset the progress state and store the reporting callback.
 
-        Progress is measured in processed items (images / threshold-images), not
-        time, so the reported fraction is exact and predictable.
+        Progress is normalized to a 0-100 percentage so the frontend bar can
+        render it directly (current = percent, total = 100).
 
         Args:
-            phase: Short label of the current phase (residual_maps / thresholds /
-                metrics / reconstruction).
+            callback: Callable(percent, total, phase) that reports one update,
+                or None to disable progress reporting.
+        """
+        self._progress_callback = callback
+        self._current_phase = None
+        self._phase_start = 0.0
+        self._phase_span = 0.0
+        self._phase_total = 0
+        self._phase_done = 0
+        self._last_emitted = None
+
+    def _begin_phase(self, phase: str, start: float, span: float, total: int) -> None:
+        """
+        Start a progress phase that maps its items onto [start, start + span] %.
+
+        The phase-start percentage is emitted immediately (with the new phase
+        label), which also serves as the run's initial 0% for the first phase.
+
+        Args:
+            phase: Short phase label (residual_maps / thresholds / metrics /
+                reconstruction).
+            start: The global percentage at which this phase begins.
+            span: The global percentage width this phase covers.
+            total: Number of items processed during this phase.
+        """
+        self._current_phase = phase
+        self._phase_start = start
+        self._phase_span = span
+        self._phase_total = max(total, 0)
+        self._phase_done = 0
+        self._emit(force=True)
+
+    def _advance(self, step: int = 1) -> None:
+        """
+        Mark items done in the current phase and emit if the percentage moved.
+
+        Args:
             step: How many items were just processed.
         """
-        self._progress_current += step
-        if self._progress_callback is not None:
-            self._progress_callback(self._progress_current, self._progress_total, phase)
+        self._phase_done += step
+        self._emit()
+
+    def _emit(self, force: bool = False) -> None:
+        """
+        Report the current percentage, throttled to whole-percent changes.
+
+        Always emits on a phase change (force) and on every new integer percent;
+        the final 100% is emitted naturally as the last phase completes.
+
+        Args:
+            force: Emit even if the percentage did not increase (phase change).
+        """
+        if self._progress_callback is None:
+            return
+
+        if self._phase_total > 0:
+            fraction = min(self._phase_done / self._phase_total, 1.0)
+        else:
+            fraction = 1.0
+
+        percent = int(round(self._phase_start + fraction * self._phase_span))
+        percent = max(0, min(100, percent))
+
+        if not force and self._last_emitted is not None and percent <= self._last_emitted:
+            return
+
+        self._progress_callback(percent, 100, self._current_phase)
+        self._last_emitted = percent
 
     @staticmethod
     def load_train_params(weights_dir: str) -> dict:
@@ -363,7 +428,7 @@ class TestAutoEncoder:
             plt.close()
             gc.collect()
 
-            self._advance_progress("reconstruction")
+            self._advance()
 
     def plot_ori_rec_mask_images(self, test_img: np.ndarray, rec_img: np.ndarray, mask: np.ndarray,
                                  vis_img: np.ndarray, idx: int, ssim_threshold: float) -> None:
@@ -484,7 +549,7 @@ class TestAutoEncoder:
             test_img, rec_img, ssim_residual_map = self.get_residual_map(test_img_path)
             gt = self.cached_gt_images.get(gt_img_path)
             cache.append((test_img, rec_img, ssim_residual_map, gt))
-            self._advance_progress("residual_maps")
+            self._advance()
         return cache
 
     def get_results(self, ssim_threshold: float, save_vis: bool) -> tuple:
@@ -563,7 +628,7 @@ class TestAutoEncoder:
             ssim_list.append(ssim_res)
             mse_list.append(mse_res)
 
-            self._advance_progress("metrics")
+            self._advance()
 
         avg_ssim = avg_of_list(ssim_list)
         mse_avg = avg_of_list(mse_list)
@@ -578,15 +643,14 @@ class TestAutoEncoder:
         Execute the ROC/SSIM/MSE evaluation or the reconstruction visualization.
 
         Args:
-            progress_callback: Optional callable(current, total, phase) invoked as
+            progress_callback: Optional callable(percent, total, phase) invoked as
                 items are processed so the caller (the Celery task) can report
                 evaluation progress. None disables progress reporting.
 
         Returns:
             dict: Summary of the run with the main metrics and output paths.
         """
-        self._progress_callback = progress_callback
-        self._progress_current = 0
+        self._init_progress(progress_callback)
 
         if not self.test_cfg.get("vis_reconstruction"):
             threshold_range = self.threshold_calculator(
@@ -598,21 +662,19 @@ class TestAutoEncoder:
             if len(threshold_range) == 0:
                 raise ValueError("Empty threshold range - check threshold_init/threshold_end/num_of_steps")
 
-            # Progress is counted in processed images across all three phases:
-            # residual maps (test images), the threshold sweep (steps x test
-            # images) and the SSIM/MSE pass (train images).
-            self._progress_total = (
-                len(self.test_images)
-                + len(threshold_range) * len(self.test_images)
-                + len(self.train_images)
-            )
+            # The three phases each span one third of the bar: residual maps
+            # (0-33%), the threshold sweep (33-66%) and the SSIM/MSE pass
+            # (66-100%). Progress is reported as a normalized 0-100 percentage.
+            third = 100.0 / 3.0
 
+            self._begin_phase("residual_maps", 0.0, third, len(self.test_images))
             self.residual_cache = self.build_residual_cache()
 
             vis_interval = self.test_cfg.get("vis_interval")
             do_vis = bool(self.test_cfg.get("vis_results"))
             fpr_list, tpr_list = [], []
 
+            self._begin_phase("thresholds", third, third, len(threshold_range))
             for t_idx, ssim_tresh in enumerate(
                 tqdm(threshold_range, total=len(threshold_range), desc='Calculating FPR and TPR')
             ):
@@ -620,9 +682,11 @@ class TestAutoEncoder:
                 fpr, tpr = self.get_results(ssim_tresh, save_vis)
                 fpr_list.append(float(fpr))
                 tpr_list.append(float(tpr))
-                self._advance_progress("thresholds", step=len(self.test_images))
+                self._advance()
 
             filename = os.path.join(str(self.metrics_save_dir), "fpr_tpr_ssim_mse_roc_auc_results.json")
+
+            self._begin_phase("metrics", 2.0 * third, third, len(self.train_images))
             avg_ssim, mse_avg = self.calculate_ssim_mse()
             auc_roc = self.plot_average_roc(fpr_list, tpr_list)
 
@@ -647,7 +711,7 @@ class TestAutoEncoder:
                 "weights_used": self.weights_path,
             }
 
-        self._progress_total = len(self.test_images)
+        self._begin_phase("reconstruction", 0.0, 100.0, len(self.test_images))
         self.plot_ori_rec_images()
         return {
             "status": "DONE",

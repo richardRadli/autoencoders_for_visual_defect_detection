@@ -5,37 +5,37 @@ type ProgressBarProps = {
   total?: number
   phase?: string
   variant?: "accent" | "success"
+  showCount?: boolean
   className?: string
 }
 
 /*
- * Shared, presentational progress bar: a thin track with a filled portion and
- * a "42% · phase · current/total" label. The caller decides what to pass, so
- * the same bar serves training (epochs), testing (processed items) and the
- * data_operations runs (processed images). accent = in progress (blue),
- * success = finished / early stopped (green). When no positive total is known
- * yet (e.g. the setup phase), the bar shows 0% and, if given, just the phase.
+ * Shared, presentational progress bar. A big centered percentage sits above a
+ * thin track; a small phase (and, when showCount is set, a current/total count)
+ * sits below. The caller supplies the numbers and labels, so the same bar
+ * serves training (epochs), testing (normalized percent), and the
+ * data_operations / tuning runs. accent = in progress (blue), success =
+ * finished (green). With no positive total the bar shows 0%.
  */
 export function ProgressBar({
   current,
   total,
   phase,
   variant = "accent",
+  showCount = true,
   className,
 }: ProgressBarProps) {
   const value = typeof current === "number" && current > 0 ? current : 0
+  const hasTotal = typeof total === "number" && total > 0
 
-  const percent =
-    total && total > 0
-      ? Math.min(100, Math.max(0, Math.round((value / total) * 100)))
-      : 0
+  const percent = hasTotal
+    ? Math.min(100, Math.max(0, Math.round((value / total) * 100)))
+    : 0
 
-  const label =
-    total && total > 0
-      ? [`${percent}%`, phase, `${Math.min(value, total)}/${total}`]
-          .filter(Boolean)
-          .join(" · ")
-      : phase ?? null
+  const count =
+    hasTotal && showCount ? `${Math.min(value, total)}/${total}` : null
+
+  const subLabel = [phase, count].filter(Boolean).join(" · ") || null
 
   const fillClass =
     variant === "success" ? styles.fillSuccess : styles.fillAccent
@@ -44,6 +44,8 @@ export function ProgressBar({
 
   return (
     <div className={classes}>
+      <span className={styles.percent}>{percent}%</span>
+
       <div
         className={styles.track}
         role="progressbar"
@@ -57,7 +59,7 @@ export function ProgressBar({
         />
       </div>
 
-      {label ? <span className={styles.label}>{label}</span> : null}
+      {subLabel ? <span className={styles.sub}>{subLabel}</span> : null}
     </div>
   )
 }

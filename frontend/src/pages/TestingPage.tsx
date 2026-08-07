@@ -373,6 +373,16 @@ export function TestingPage() {
 
   const previewTitle = `Preview: ${previewType}`
   const badge = RUN_BADGE[task.state]
+  const isRunning = task.state === "running"
+  const isDone = task.state === "done"
+  const showProgress = isRunning || isDone
+
+  // On done we fill to 100% green regardless of the last PROGRESS meta, so it
+  // stays complete after a refresh (the progress meta is not persisted).
+  const progressCurrent = isDone ? 100 : task.progress?.current
+  const progressTotal = isDone ? 100 : task.progress?.total
+  const progressPhase = isDone ? "done" : task.progress?.phase
+  const progressVariant: "accent" | "success" = isDone ? "success" : "accent"
 
   const submittedNetworkType = task.submittedParams
     ? resolveNetworkType(
@@ -824,13 +834,14 @@ export function TestingPage() {
               ]}
             />
 
-            {task.state === "running" ? (
+            {showProgress ? (
               <ProgressBar
                 className={styles.progress}
-                current={task.progress?.current}
-                total={task.progress?.total}
-                phase={task.progress?.phase}
-                variant="accent"
+                current={progressCurrent}
+                total={progressTotal}
+                phase={progressPhase}
+                variant={progressVariant}
+                showCount={false}
               />
             ) : null}
 

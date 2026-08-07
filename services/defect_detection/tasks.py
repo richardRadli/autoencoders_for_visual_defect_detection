@@ -80,5 +80,8 @@ def test_autoencoder_task(self, config: dict):
         dict: The evaluation result summary (metrics and output paths).
     """
     logging.info("Starting autoencoder testing task")
-    self.update_state(state="PROGRESS", meta={"status": "Testing in progress"})
+    self.update_state(
+        state="PROGRESS",
+        meta={"current": 0, "total": 100, "phase": "starting"},
+    )
     return TestAutoEncoder(config).run(progress_callback=_progress_reporter(self))
