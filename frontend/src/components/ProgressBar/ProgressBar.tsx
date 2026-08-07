@@ -15,7 +15,10 @@ type ProgressBarProps = {
  * sits below. The caller supplies the numbers and labels, so the same bar
  * serves training (epochs), testing (normalized percent), and the
  * data_operations / tuning runs. accent = in progress (blue), success =
- * finished (green). With no positive total the bar shows 0%.
+ * finished (green). On success the bar "settles": it holds full green for a few
+ * seconds, then the percent and details fade out via CSS, leaving a faint green
+ * track. Remounting (returning to the page) replays that fade. With no positive
+ * total the bar shows 0%.
  */
 export function ProgressBar({
   current,
@@ -37,10 +40,12 @@ export function ProgressBar({
 
   const subLabel = [phase, count].filter(Boolean).join(" · ") || null
 
-  const fillClass =
-    variant === "success" ? styles.fillSuccess : styles.fillAccent
+  const settled = variant === "success"
+  const fillClass = settled ? styles.fillSuccess : styles.fillAccent
 
-  const classes = [styles.wrap, className].filter(Boolean).join(" ")
+  const classes = [styles.wrap, settled ? styles.settled : null, className]
+    .filter(Boolean)
+    .join(" ")
 
   return (
     <div className={classes}>

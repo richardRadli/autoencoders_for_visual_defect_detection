@@ -41,3 +41,35 @@
   color: var(--text-muted);
   line-height: var(--leading-normal);
 }
+
+/* On success the bar holds full green for a few seconds, then the percent and
+   details fade out and the green track dims, leaving a faint marker. Mounting
+   (returning to the page) replays it. Only the success state is affected. */
+.settled .percent,
+.settled .sub {
+  animation: progressSettleText 6s ease forwards;
+}
+
+.settled .fill {
+  animation: progressSettleFill 6s ease forwards;
+}
+
+@keyframes progressSettleText {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.15;
+  }
+}
+
+@keyframes progressSettleFill {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.35;
+  }
+}
