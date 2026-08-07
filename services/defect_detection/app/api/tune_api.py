@@ -42,20 +42,20 @@ NETWORK_TYPE_MAP = {
 @tune_router.post("/run")
 async def run_tuning(
     dataset_type: DatasetType = Query(..., description="Dataset to tune on"),
-    ae_type: AEType = Query(AEType.plain, description="plain = standard AE, denoising = noisy→clean (DAE)"),
-    model_size: ModelSize = Query(ModelSize.base, description="base = standard, extended = deeper network"),
-    n_trials: int | None = Query(None, ge=1, description="Number of Optuna trials, whole number, e.g. 20 — empty = tuning_config.json default"),
-    epochs_per_trial: int | None = Query(None, ge=1, description="Epochs trained per trial, whole number, e.g. 5 — empty = tuning_config.json default"),
-    learning_rate_min: float | None = Query(None, gt=0, description="Lowest learning rate to search, decimal, e.g. 0.00001 — empty = json default"),
-    learning_rate_max: float | None = Query(None, gt=0, description="Highest learning rate to search, decimal, e.g. 0.01 — empty = json default"),
-    latent_space_dimension_min: int | None = Query(None, ge=1, description="Smallest latent size to search, whole number, e.g. 16 — empty = json default"),
-    latent_space_dimension_max: int | None = Query(None, ge=1, description="Largest latent size to search, whole number, e.g. 256 — empty = json default"),
-    step_size_min: int | None = Query(None, ge=1, description="Smallest LR step size to search, whole number, e.g. 5 — empty = json default"),
-    step_size_max: int | None = Query(None, ge=1, description="Largest LR step size to search, whole number, e.g. 30 — empty = json default"),
-    gamma_min: float | None = Query(None, gt=0, description="Smallest LR decay factor to search, decimal, e.g. 0.1 — empty = json default"),
-    gamma_max: float | None = Query(None, gt=0, description="Largest LR decay factor to search, decimal, e.g. 0.9 — empty = json default"),
-    batch_size_min: int | None = Query(None, ge=1, description="Smallest batch size to search, whole number, e.g. 16 — empty = json default"),
-    batch_size_max: int | None = Query(None, ge=1, description="Largest batch size to search, whole number, e.g. 256 — empty = json default"),
+    ae_type: AEType = Query(AEType.plain, description="plain trains a standard AE, denoising trains a DAE and needs noise images"),
+    model_size: ModelSize = Query(ModelSize.base, description="base is the standard network, extended is deeper"),
+    n_trials: int | None = Query(None, ge=1, description="Number of Optuna trials. Whole number, for example 20. Leave empty to use the server default."),
+    epochs_per_trial: int | None = Query(None, description="Epochs trained per trial. Whole number of at least 2, for example 5. Leave empty to use the server default."),
+    learning_rate_min: float | None = Query(None, gt=0, description="Lowest learning rate to search. Decimal above 0, for example 0.00001. Leave empty to use the server default."),
+    learning_rate_max: float | None = Query(None, gt=0, description="Highest learning rate to search. Decimal above 0, for example 0.01. Leave empty to use the server default."),
+    latent_space_dimension_min: int | None = Query(None, ge=1, description="Smallest latent size to search. Whole number, for example 16. Leave empty to use the server default."),
+    latent_space_dimension_max: int | None = Query(None, ge=1, description="Largest latent size to search. Whole number, for example 256. Leave empty to use the server default."),
+    step_size_min: int | None = Query(None, ge=1, description="Smallest LR scheduler step to search. Whole number, for example 1. Leave empty to use the server default."),
+    step_size_max: int | None = Query(None, ge=1, description="Largest LR scheduler step to search, must be smaller than epochs_per_trial. Whole number, for example 4. Leave empty to use the server default."),
+    gamma_min: float | None = Query(None, description="Smallest LR decay factor to search. Decimal above 0 and at most 1, for example 0.1. Leave empty to use the server default."),
+    gamma_max: float | None = Query(None, description="Largest LR decay factor to search. Decimal above 0 and at most 1, for example 0.9. Leave empty to use the server default."),
+    batch_size_min: int | None = Query(None, ge=1, description="Smallest batch size to search. Whole number, for example 16. Leave empty to use the server default."),
+    batch_size_max: int | None = Query(None, ge=1, description="Largest batch size to search. Whole number, for example 256. Leave empty to use the server default."),
 ):
     """
     Queue an Optuna hyperparameter tuning run.
@@ -69,6 +69,10 @@ async def run_tuning(
     (validation_split, grayscale, early_stopping, seed) is read from
     training_config.json and kept fixed. The run stays fully in memory and
     produces no weights, params.json or TensorBoard log.
+
+    Every rule below is checked on the effective values after the
+    tuning_config.json fallback, so a bad config default is rejected the same
+    way as a bad query override.
 
     Args:
         dataset_type: Dataset to tune on.
@@ -109,37 +113,61 @@ async def run_tuning(
     if resolved_n_trials < 1:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="n_trials must be greater than or equal to 1",
+            detail="n_trials must be at least 1.",
         )
-    if resolved_epochs_per_trial < 1:
+
+    if resolved_epochs_per_trial < 2:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="epochs_per_trial must be greater than or equal to 1",
+            detail="epochs_per_trial must be at least 2, so the learning rate scheduler has room to step.",
         )
+
     if resolved_learning_rate_min > resolved_learning_rate_max:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="learning_rate_min must be less than or equal to learning_rate_max",
+            detail="learning_rate_min must be less than or equal to learning_rate_max.",
         )
+
     if resolved_latent_min > resolved_latent_max:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="latent_space_dimension_min must be less than or equal to latent_space_dimension_max",
+            detail="latent_space_dimension_min must be less than or equal to latent_space_dimension_max.",
         )
+
     if resolved_step_min > resolved_step_max:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="step_size_min must be less than or equal to step_size_max",
+            detail="step_size_min must be less than or equal to step_size_max.",
         )
+
+    if resolved_step_max >= resolved_epochs_per_trial:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="step_size_max must be smaller than epochs_per_trial, otherwise the learning rate scheduler never steps within a trial.",
+        )
+
+    if not 0 < resolved_gamma_min <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="gamma_min must be greater than 0 and at most 1.",
+        )
+
+    if not 0 < resolved_gamma_max <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="gamma_max must be greater than 0 and at most 1.",
+        )
+
     if resolved_gamma_min > resolved_gamma_max:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="gamma_min must be less than or equal to gamma_max",
+            detail="gamma_min must be less than or equal to gamma_max.",
         )
+
     if resolved_batch_min > resolved_batch_max:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="batch_size_min must be less than or equal to batch_size_max",
+            detail="batch_size_min must be less than or equal to batch_size_max.",
         )
 
     network_type = NETWORK_TYPE_MAP[(ae_type.value, model_size.value)]
