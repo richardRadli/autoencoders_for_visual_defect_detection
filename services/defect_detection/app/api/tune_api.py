@@ -54,7 +54,8 @@ async def run_tuning(
     step_size_max: int | None = Query(None, ge=1, description="Largest LR step size to search, whole number, e.g. 30 — empty = json default"),
     gamma_min: float | None = Query(None, gt=0, description="Smallest LR decay factor to search, decimal, e.g. 0.1 — empty = json default"),
     gamma_max: float | None = Query(None, gt=0, description="Largest LR decay factor to search, decimal, e.g. 0.9 — empty = json default"),
-    batch_size_values: list[int] | None = Query(None, description="Batch sizes to choose from, whole numbers, e.g. 32 64 128 — empty = json default"),
+    batch_size_min: int | None = Query(None, ge=1, description="Smallest batch size to search, whole number, e.g. 16 — empty = json default"),
+    batch_size_max: int | None = Query(None, ge=1, description="Largest batch size to search, whole number, e.g. 256 — empty = json default"),
 ):
     """
     Queue an Optuna hyperparameter tuning run.
@@ -62,11 +63,11 @@ async def run_tuning(
     The two dropdowns choose the network: ae_type (plain/denoising) and
     model_size (base/extended) combine into the network type
     (AE / AEE / DAE / DAEE), fixed for the whole run. Exactly five
-    hyperparameters are searched — learning_rate, latent_space_dimension,
-    step_size and gamma within [min, max], and batch_size from the given list.
-    Each tuning field left empty falls back to tuning_config.json. Every other
-    training field (validation_split, grayscale, early_stopping, seed) is read
-    from training_config.json and kept fixed. The run stays fully in memory and
+    hyperparameters are searched within their [min, max] bounds: learning_rate,
+    latent_space_dimension, step_size, gamma and batch_size. Each field left
+    empty falls back to tuning_config.json. Every other training field
+    (validation_split, grayscale, early_stopping, seed) is read from
+    training_config.json and kept fixed. The run stays fully in memory and
     produces no weights, params.json or TensorBoard log.
 
     Args:
@@ -83,7 +84,8 @@ async def run_tuning(
         step_size_max: Optional override for the step-size upper bound.
         gamma_min: Optional override for the gamma lower bound.
         gamma_max: Optional override for the gamma upper bound.
-        batch_size_values: Optional override for the discrete batch sizes.
+        batch_size_min: Optional override for the batch-size lower bound.
+        batch_size_max: Optional override for the batch-size upper bound.
 
     Returns:
         dict: The queued task id and its status.
@@ -101,7 +103,8 @@ async def run_tuning(
     resolved_step_max = tuning_cfg.step_size_max if step_size_max is None else step_size_max
     resolved_gamma_min = tuning_cfg.gamma_min if gamma_min is None else gamma_min
     resolved_gamma_max = tuning_cfg.gamma_max if gamma_max is None else gamma_max
-    resolved_batch_size_values = tuning_cfg.batch_size_values if batch_size_values is None else batch_size_values
+    resolved_batch_min = tuning_cfg.batch_size_min if batch_size_min is None else batch_size_min
+    resolved_batch_max = tuning_cfg.batch_size_max if batch_size_max is None else batch_size_max
 
     if resolved_n_trials < 1:
         raise HTTPException(
@@ -133,15 +136,10 @@ async def run_tuning(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="gamma_min must be less than or equal to gamma_max",
         )
-    if not resolved_batch_size_values:
+    if resolved_batch_min > resolved_batch_max:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="batch_size_values must contain at least one value",
-        )
-    if any(value < 1 for value in resolved_batch_size_values):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="batch_size_values must all be greater than or equal to 1",
+            detail="batch_size_min must be less than or equal to batch_size_max",
         )
 
     network_type = NETWORK_TYPE_MAP[(ae_type.value, model_size.value)]
@@ -159,7 +157,8 @@ async def run_tuning(
         "step_size_max": resolved_step_max,
         "gamma_min": resolved_gamma_min,
         "gamma_max": resolved_gamma_max,
-        "batch_size_values": resolved_batch_size_values,
+        "batch_size_min": resolved_batch_min,
+        "batch_size_max": resolved_batch_max,
         "validation_split": training_cfg.validation_split,
         "grayscale": training_cfg.grayscale,
         "early_stopping": training_cfg.early_stopping,

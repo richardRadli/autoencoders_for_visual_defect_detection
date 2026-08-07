@@ -23,15 +23,14 @@ class TuneAutoEncoder:
         Prepare the search space and the fixed training fields for one tuning run.
 
         The five tuned hyperparameters (learning_rate, latent_space_dimension,
-        step_size, gamma, batch_size) are searched within the settings carried by
-        config. Every other training field is fixed for the whole run and reused
-        unchanged in each trial.
+        step_size, gamma, batch_size) are searched within the [min, max] bounds
+        carried by config. Every other training field is fixed for the whole run
+        and reused unchanged in each trial.
 
         Args:
             config: Effective tuning config resolved by the API (network/dataset,
-                n_trials, epochs_per_trial, the search-space settings for the five
-                parameters, and the fixed training fields taken from
-                training_config.json).
+                n_trials, epochs_per_trial, the five [min, max] search bounds, and
+                the fixed training fields taken from training_config.json).
         """
         setup_logger()
 
@@ -40,7 +39,7 @@ class TuneAutoEncoder:
         self.n_trials = config.get("n_trials")
         self.epochs_per_trial = config.get("epochs_per_trial")
 
-        # Search-space bounds for the four range-sampled hyperparameters.
+        # Search-space bounds for the five tuned hyperparameters.
         self.learning_rate_min = config.get("learning_rate_min")
         self.learning_rate_max = config.get("learning_rate_max")
         self.latent_space_dimension_min = config.get("latent_space_dimension_min")
@@ -49,10 +48,8 @@ class TuneAutoEncoder:
         self.step_size_max = config.get("step_size_max")
         self.gamma_min = config.get("gamma_min")
         self.gamma_max = config.get("gamma_max")
-
-        # batch_size is chosen from a discrete list (e.g. [32, 64, 128]), not a
-        # continuous range, so it never lands on values like 73 or 117.
-        self.batch_size_values = config.get("batch_size_values")
+        self.batch_size_min = config.get("batch_size_min")
+        self.batch_size_max = config.get("batch_size_max")
 
         # Fixed (non-tuned) training fields, taken from training_config.json and
         # reused unchanged for every trial.
@@ -149,8 +146,8 @@ class TuneAutoEncoder:
             "gamma": trial.suggest_float(
                 "gamma", self.gamma_min, self.gamma_max
             ),
-            "batch_size": trial.suggest_categorical(
-                "batch_size", self.batch_size_values
+            "batch_size": trial.suggest_int(
+                "batch_size", self.batch_size_min, self.batch_size_max
             ),
             # step_size and gamma only take effect when the LR scheduler runs.
             "decrease_learning_rate": True,

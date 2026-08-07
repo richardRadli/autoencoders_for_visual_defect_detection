@@ -3,7 +3,7 @@ import logging
 import os
 
 from dataclasses import dataclass
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 
 @dataclass
@@ -18,7 +18,8 @@ class TuningConfig:
     step_size_max: int
     gamma_min: float
     gamma_max: float
-    batch_size_values: List[int]
+    batch_size_min: int
+    batch_size_max: int
 
 
 class TuningConfigService:
@@ -48,7 +49,8 @@ class TuningConfigService:
                 step_size_max=data["step_size_max"],
                 gamma_min=data["gamma_min"],
                 gamma_max=data["gamma_max"],
-                batch_size_values=data["batch_size_values"],
+                batch_size_min=data["batch_size_min"],
+                batch_size_max=data["batch_size_max"],
             )
 
             logging.info(f"Loaded tuning config from: {target_file}")
