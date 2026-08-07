@@ -6,6 +6,7 @@ import { DrawRectanglesPage } from "./pages/DrawRectanglesPage"
 import { MainMenu } from "./pages/MainMenu"
 import { TestingPage } from "./pages/TestingPage"
 import { TrainingPage } from "./pages/TrainingPage"
+import { TuningPage } from "./pages/TuningPage"
 import styles from "./App.module.css"
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
             <Route path="/training" element={<TrainingPage />} />
             <Route path="/testing" element={<TestingPage />} />
             <Route path="/augmentation" element={<AugmentationPage />} />
+            <Route path="/tuning" element={<TuningPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

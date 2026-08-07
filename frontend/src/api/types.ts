@@ -176,7 +176,7 @@ export type QueuedTask = {
 /* PROGRESS meta from the worker. The initial update may carry only a status
    message; per-item updates carry current/total and a short phase label
    (training: "epochs"; testing: "residual_maps" / "thresholds" / "metrics" /
-   "reconstruction"). */
+   "reconstruction"; tuning: "trial X/N"). */
 export type TaskProgress = {
   status?: string
   current?: number
@@ -220,6 +220,21 @@ export type TestReconstructionResult = {
 
 export type TestResult = TestMetricsResult | TestReconstructionResult
 
+/* The five tuned hyperparameters Optuna reports back as the best combination. */
+export type TuningBestParams = {
+  learning_rate: number
+  latent_space_dimension: number
+  step_size: number
+  gamma: number
+  batch_size: number
+}
+
+export type TuningResult = {
+  status: string
+  best_params: TuningBestParams
+  best_valid_loss: number
+}
+
 export type TaskStatus<T> = {
   task_id: string
   status: TaskState
@@ -228,6 +243,7 @@ export type TaskStatus<T> = {
 
 export type TrainStatus = TaskStatus<TrainResult>
 export type TestStatus = TaskStatus<TestResult>
+export type TuningStatus = TaskStatus<TuningResult>
 
 export type AbortResult = {
   status: string
@@ -268,4 +284,25 @@ export type TestingParams = {
   vis_results?: boolean
   vis_reconstruction?: boolean
   vis_interval?: number
+}
+
+/* Tuning request params. Every tuning field is optional — left out, the API
+   fills it from tuning_config.json. All five hyperparameters are searched as
+   [min, max] ranges. */
+export type TuningParams = {
+  dataset_type: DatasetType
+  ae_type?: AEType
+  model_size?: ModelSize
+  n_trials?: number
+  epochs_per_trial?: number
+  learning_rate_min?: number
+  learning_rate_max?: number
+  latent_space_dimension_min?: number
+  latent_space_dimension_max?: number
+  step_size_min?: number
+  step_size_max?: number
+  gamma_min?: number
+  gamma_max?: number
+  batch_size_min?: number
+  batch_size_max?: number
 }

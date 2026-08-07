@@ -4,6 +4,7 @@ import {
   Cpu,
   ImagePlus,
   Play,
+  SlidersHorizontal,
   SquarePlus,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -154,6 +155,28 @@ export function MainMenu() {
                   )
                 })}
               </ul>
+
+              {service.id === "defect_detection" ? (
+                <div className={styles.optional}>
+                  <div className={styles.optionalDivider}>
+                    <span className={styles.optionalLabel}>Optional</span>
+                    <span className={styles.optionalRule} />
+                  </div>
+
+                  <Link className={styles.stepLink} to="/tuning">
+                    <SlidersHorizontal
+                      className={styles.stepIcon}
+                      aria-hidden="true"
+                    />
+                    <span className={styles.stepLabel}>Parameter tuning</span>
+                    <span className={styles.optionalPill}>Optional</span>
+                    <ChevronRight
+                      className={styles.chevron}
+                      aria-hidden="true"
+                    />
+                  </Link>
+                </div>
+              ) : null}
             </section>
           )
         })}

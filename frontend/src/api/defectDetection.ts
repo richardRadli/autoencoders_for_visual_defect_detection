@@ -13,6 +13,8 @@ import type {
   TestingParams,
   TrainStatus,
   TrainingParams,
+  TuningParams,
+  TuningStatus,
   WeightsList,
 } from "./types"
 
@@ -64,6 +66,26 @@ export function getTestingStatus(
 
 export function stopTesting(taskId: string): Promise<AbortResult> {
   return apiPost<AbortResult>(`${DEFECT}/test/stop/${encodeURIComponent(taskId)}`)
+}
+
+/* Tuning ----------------------------------------------------------------- */
+
+export function runTuning(params: TuningParams): Promise<QueuedTask> {
+  return apiPost<QueuedTask>(buildUrl(DEFECT, "/tune/run", params))
+}
+
+export function getTuningStatus(
+  taskId: string,
+  signal?: AbortSignal,
+): Promise<TuningStatus> {
+  return apiGet<TuningStatus>(
+    `${DEFECT}/tune/status/${encodeURIComponent(taskId)}`,
+    signal,
+  )
+}
+
+export function stopTuning(taskId: string): Promise<AbortResult> {
+  return apiPost<AbortResult>(`${DEFECT}/tune/stop/${encodeURIComponent(taskId)}`)
 }
 
 /* Dataset ---------------------------------------------------------------- */
