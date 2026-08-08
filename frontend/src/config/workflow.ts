@@ -24,13 +24,15 @@ export const SERVICES: Record<ServiceId, Service> = {
     id: "data_operations",
     label: "Data operations",
     port: 8000,
-    description: "Prepare augmented and noisy images for the pipeline.",
+    description:
+      "Prepare the images used by Training. Leaving or refreshing these pages stops the current run.",
   },
   defect_detection: {
     id: "defect_detection",
     label: "Defect detection",
     port: 8001,
-    description: "Train autoencoders and evaluate visual defects.",
+    description:
+      "Train models, test saved weights, or optionally search for better Training settings. Parameter tuning suggests settings but does not save a model.",
   },
 }
 

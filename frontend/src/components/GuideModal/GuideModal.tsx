@@ -9,17 +9,15 @@ import styles from "./GuideModal.module.css"
 
 const TITLE_ID = "guide-modal-title"
 
-/* One explanation per workflow step. Typed against StepId, so a new step in
-   workflow.ts cannot ship without its guide text. */
 const STEP_HELP: Record<StepId, string> = {
   augmentation:
-    "Turns a handful of good images into thousands by rotating and flipping them, then crops them to the size the network expects.",
+    'Creates changed copies of the images in the "good" folder by rotating, flipping, and cropping them. The new images are saved in "aug" and used by Training.',
   "draw-rectangles":
-    "Covers parts of the augmented images with grey rectangles. The network learns to rebuild what is hidden — that is what makes it notice defects later.",
+    'Covers parts of the images in "aug" with gray rectangles and saves the results in "noise". This is needed only when ae_type is set to denoising. The number of "aug" and "noise" images must match.',
   training:
-    "Trains an autoencoder on the prepared images. It only ever sees good parts, so it gets good at reconstructing good parts, and bad at reconstructing defects.",
+    'Uses the images in "aug" to train the selected model. Denoising models also use the matching images in "noise". The best weights are saved for Testing.',
   testing:
-    "Runs the trained network over the test images and scores them. Where the reconstruction differs from the original, there is probably a defect.",
+    "Loads the weights you select and checks the images in the test folder. It marks areas that may contain defects and saves result images and scores.",
 }
 
 type GuideModalProps = {
@@ -58,8 +56,6 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
     }
   }, [open])
 
-  // Focus moves into the dialog on open and back to the trigger on close,
-  // so keyboard users are not dropped at the top of the page.
   useEffect(() => {
     if (!open) {
       return
@@ -97,8 +93,11 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
             <h2 className={styles.title} id={TITLE_ID}>
               How this works
             </h2>
+
             <p className={styles.subtitle}>
-              Run the steps in order — each one prepares what the next needs.
+              This app detects visual defects in images. It learns from images
+              in the "good" folder, then looks for possible defects in test
+              images. Follow the steps below in order.
             </p>
           </div>
 
@@ -117,12 +116,34 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                     <span className={styles.stepNumber} aria-hidden="true">
                       {getStepNumber(step.id)}
                     </span>
+
                     <div className={styles.stepText}>
                       <p className={styles.stepLabel}>{step.label}</p>
                       <p className={styles.stepHelp}>{STEP_HELP[step.id]}</p>
                     </div>
                   </li>
                 ))}
+
+                {service.id === "defect_detection" ? (
+                  <li className={styles.step}>
+                    <span className={styles.stepNumber} aria-hidden="true">
+                      *
+                    </span>
+
+                    <div className={styles.stepText}>
+                      <p className={styles.stepLabel}>
+                        Parameter tuning (Optuna, optional)
+                      </p>
+
+                      <p className={styles.stepHelp}>
+                        Tries different values for five Training settings and
+                        shows which combination worked best. It does not save
+                        weights or a finished model. Copy the returned values
+                        to Training if you want to use them.
+                      </p>
+                    </div>
+                  </li>
+                ) : null}
               </ol>
             </section>
           ))}
