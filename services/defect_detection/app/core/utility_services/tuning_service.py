@@ -1,11 +1,13 @@
 import gc
+import json
 import logging
 
 import optuna
 import torch
 
 from services.defect_detection.app.core.utility_services.training_service import TrainAutoEncoder
-from utils.system_utils import setup_logger
+from shared.core.path_bindings import training_testing_paths
+from utils.system_utils import create_timestamp, setup_logger
 
 
 class TuneAutoEncoder:
@@ -14,8 +16,10 @@ class TuneAutoEncoder:
 
     Each trial runs a short training via TrainAutoEncoder with artifact saving
     turned off, so no weights, params.json, TensorBoard log or any other
-    persistent file is produced. Only the returned result dict survives:
-    the best five parameters and the best validation loss.
+    persistent per-trial file is produced. At the end a single result JSON is
+    written to the dataset's tuning folder: it records how the search was run
+    (ranges, trials, epochs) and which parameters won, so the outcome survives
+    after the frontend view is closed. No model weights are ever saved.
     """
 
     def __init__(self, config: dict):
@@ -171,9 +175,32 @@ class TuneAutoEncoder:
 
         return best_valid_loss
 
+    def _save_result(self, result: dict) -> None:
+        """
+        Write the tuning result to a JSON file in the dataset's tuning folder.
+
+        This is the only persistent output of a tuning run: no weights,
+        TensorBoard log or per-trial file is produced. The single JSON records
+        how the search was run and which parameters won.
+
+        Args:
+            result: The full result object returned by run().
+
+        Returns:
+            None
+        """
+        tuning_dir = training_testing_paths(self.dataset_type)["tuning"]
+        tuning_dir.mkdir(parents=True, exist_ok=True)
+        output_path = tuning_dir / f"tuning_{result['timestamp']}.json"
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=2)
+
+        logging.info(f"Saved tuning result to {output_path}")
+
     def run(self, progress_callback=None) -> dict:
         """
-        Run the whole Optuna study in memory and return the best parameters.
+        Run the whole Optuna study in memory, save the result JSON and return it.
 
         Args:
             progress_callback: Optional callable(current, total, phase) forwarded
@@ -181,8 +208,9 @@ class TuneAutoEncoder:
                 disables progress reporting.
 
         Returns:
-            dict: {"status", "best_params", "best_valid_loss"} — JSON-compatible,
-            with best_params holding exactly the five tuned hyperparameters.
+            dict: The full result object (also written to disk): status,
+            timestamp, dataset/network, trial counts, the five search ranges,
+            the best five parameters and the best validation loss.
         """
         self._progress_callback = progress_callback
 
@@ -209,12 +237,45 @@ class TuneAutoEncoder:
             "batch_size": study.best_params["batch_size"],
         }
 
+        timestamp = create_timestamp()
+
+        result = {
+            "status": "DONE",
+            "timestamp": timestamp,
+            "dataset_type": self.dataset_type,
+            "network_type": self.network_type,
+            "n_trials": self.n_trials,
+            "epochs_per_trial": self.epochs_per_trial,
+            "search_ranges": {
+                "learning_rate": {
+                    "min": self.learning_rate_min,
+                    "max": self.learning_rate_max,
+                },
+                "latent_space_dimension": {
+                    "min": self.latent_space_dimension_min,
+                    "max": self.latent_space_dimension_max,
+                },
+                "step_size": {
+                    "min": self.step_size_min,
+                    "max": self.step_size_max,
+                },
+                "gamma": {
+                    "min": self.gamma_min,
+                    "max": self.gamma_max,
+                },
+                "batch_size": {
+                    "min": self.batch_size_min,
+                    "max": self.batch_size_max,
+                },
+            },
+            "best_params": best_params,
+            "best_valid_loss": float(study.best_value),
+        }
+
         logging.info(
             f"Tuning done. Best valid loss {study.best_value:.5f}, params {best_params}"
         )
 
-        return {
-            "status": "DONE",
-            "best_params": best_params,
-            "best_valid_loss": float(study.best_value),
-        }
+        self._save_result(result)
+
+        return result

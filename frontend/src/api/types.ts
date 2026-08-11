@@ -229,8 +229,31 @@ export type TuningBestParams = {
   batch_size: number
 }
 
+/* The [min, max] search bounds recorded for each tuned hyperparameter, so the
+   saved result shows how the search was run, not just its outcome. */
+export type TuningSearchRange = {
+  min: number
+  max: number
+}
+
+export type TuningSearchRanges = {
+  learning_rate: TuningSearchRange
+  latent_space_dimension: TuningSearchRange
+  step_size: TuningSearchRange
+  gamma: TuningSearchRange
+  batch_size: TuningSearchRange
+}
+
+/* Mirrors the JSON the backend both returns and writes to
+   data/<dataset>/tuning/tuning_<timestamp>.json one shape, one source. */
 export type TuningResult = {
   status: string
+  timestamp: string
+  dataset_type: DatasetType
+  network_type: NetworkType
+  n_trials: number
+  epochs_per_trial: number
+  search_ranges: TuningSearchRanges
   best_params: TuningBestParams
   best_valid_loss: number
 }
